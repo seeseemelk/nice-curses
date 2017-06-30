@@ -1,0 +1,6 @@
+name "nice-curses"
+description "A nice object-oriented wrapper over ncurses library."
+authors "Michail Pevnev"
+copyright "Copyright © 2017, michail"
+license "Boost"
+dependency "ncurses" version="~master"
