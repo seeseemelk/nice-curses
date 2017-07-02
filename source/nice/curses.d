@@ -368,6 +368,24 @@ final class Window
                 throw new NCException("Failed to add character '%s'", ch);
         }
 
+        void addnstr(A: chtype)(int y, int x, string str, int n, A attr = Attr.normal)
+        {
+            import std.string;
+
+            setAttr(attr);
+            if (nc.mvwaddnstr(ptr, y, x, str.toStringz, n) != OK)
+                throw new NCException("Failed to write string '%s' at %s:%s", str, y, x);
+        }
+
+        void addnstr(A: chtype)(int n, string str, int n, A attr = Attr.normal)
+        {
+            import std.string;
+
+            setAttr(attr);
+            if (nc.waddnstr(ptr, str.toStringz, n) != OK)
+                throw new NCException("Failed to write string '%s' at %s:%s", str, y, x);
+        }
+
         void addstr(A: chtype)(int y, int x, string str, A attr = Attr.normal)
         {
             import std.string;
@@ -386,22 +404,15 @@ final class Window
                 throw new NCException("Failed to write string '%s'", str);
         }
 
-        void addnstr(A: chtype)(int y, int x, string str, int n, A attr = Attr.normal)
+        /* Add a centered string. */
+        void addstrc(A: chtype)(int y, int x, string str, A attr = Attr.normal)
         {
-            import std.string;
+            x -= cast(int) str.length / 2;
+            if (x < 0) 
+                throw new NCException("Attempted to print a centered string too" ~
+                        " close to the left border");
 
-            setAttr(attr);
-            if (nc.mvwaddnstr(ptr, y, x, str.toStringz, n) != OK)
-                throw new NCException("Failed to write string '%s' at %s:%s", str, y, x);
-        }
-
-        void addnstr(A: chtype)(int n, string str, int n, A attr = Attr.normal)
-        {
-            import std.string;
-
-            setAttr(attr);
-            if (nc.waddnstr(ptr, str.toStringz, n) != OK)
-                throw new NCException("Failed to write string '%s' at %s:%s", str, y, x);
+            addstr(y, x, str, attr);
         }
 
         void border(chtype left, chtype right, chtype top, chtype bottom,
