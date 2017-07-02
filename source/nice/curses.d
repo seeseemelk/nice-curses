@@ -52,7 +52,7 @@ final class Curses
         {
             cfg = config;
 
-            stdscr = new Window(initscr());
+            stdscr = new Window(null, initscr());
             if (config.useColors) {
                 import std.exception;
                 enforce(has_colors());
@@ -60,6 +60,7 @@ final class Curses
                 colors = new ColorTable;
                 if (config.useStdColors)
                     colors.initDefaultColors();
+                stdscr.colors = colors;
             }
 
             if (config.disableEcho) echo(false);
@@ -97,7 +98,7 @@ final class Curses
 
         Window newWindow(int nlines, int ncols, int begin_y, int begin_x)
         {
-            Window res = new Window(nlines, ncols, begin_y, begin_x, cfg.initKeypad);
+            Window res = new Window(colors, nlines, ncols, begin_y, begin_x, cfg.initKeypad);
             windows ~= res;
             return res;
         }
@@ -255,16 +256,18 @@ final class Window
         bool isKeypad;
 
     package:
-        this(WINDOW* fromPtr, bool setKeypad = true)
+        this(ColorTable colors, WINDOW* fromPtr, bool setKeypad = true)
         {
             ptr = fromPtr;
+            this.colors = colors;
             keypad(setKeypad);
             isKeypad = setKeypad;
         }
 
-        this(int nlines, int ncols, int y, int x, bool setKeypad = true)
+        this(ColorTable colors, int nlines, int ncols, int y, int x, bool setKeypad = true)
         {
             ptr = newwin(nlines, ncols, y, x);
+            this.colors = colors;
             keypad(setKeypad);
             isKeypad = setKeypad;
         }
@@ -277,6 +280,8 @@ final class Window
         }
 
     public:
+        ColorTable colors;
+
         /* ---------- general manipulation ---------- */
 
         void keypad(bool set)
@@ -317,7 +322,7 @@ final class Window
                 throw new NCException(
                         "Failed to create a subwindow at %s:%s with height %s and width %s",
                         y, x, nlines, ncols);
-            Window res = new Window(p, isKeypad);
+            Window res = new Window(colors, p, isKeypad);
             res.parent = this;
             children ~= res;
             return res;
@@ -330,7 +335,7 @@ final class Window
                 throw new NCException(
                         "Failed to create a subwindow at %s:%s with height %s and width %s",
                         y, x, nlines, ncols);
-            Window res = new Window(p, isKeypad);
+            Window res = new Window(colors, p, isKeypad);
             res.parent = this;
             children ~= res;
             return res;
