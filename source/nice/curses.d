@@ -73,6 +73,12 @@ final class Curses
                 nc.nonl();
         }
 
+        /* Use default configuration. */
+        this()
+        {
+            this(Config())
+        }
+
         /* Finalize the library. Consider adding 
            'scope(exit) destroy(cursesState)`
            to the top of yours program to automatically clean-up the library,
