@@ -23,6 +23,7 @@ final class Curses
     public:
         Window stdscr;
         ColorTable stdColors;
+        static bool echoMode = true;
 
         /* This struct controls initialization and finalization of the library. */
         static struct Config
@@ -125,6 +126,7 @@ final class Curses
                 nc.echo();
             else
                 nc.noecho();
+            Curses.echoMode = set;
         }
 
         void flash()
@@ -180,32 +182,32 @@ final class Curses
 
         /* ---------- some constants ---------- */
 
-        int lines() const @property
+        static int lines()
         {
             return nc.LINES;
         }
 
-        int cols() const @property
+        static int cols()
         {
             return nc.COLS;
         }
 
-        int colors() const @property
+        static int colors()
         {
             return nc.COLORS;
         }
 
-        int colorPairs() const @property
+        static int colorPairs()
         {
             return nc.COLOR_PAIRS;
         }
 
-        int tabSize() const @property
+        static int tabSize()
         {
             return nc.TABSIZE;
         }
 
-        int escDelay() const @property
+        static int escDelay()
         {
             return nc.ESCDELAY;
         }
@@ -237,7 +239,7 @@ final class Curses
         string keyName(int key) const @property
         {
             import std.string;
-            return cast(string) nc.keyname(key).fromStringz;
+            return nc.keyname(key).fromStringz.idup;
         }
 }
 
@@ -248,7 +250,7 @@ final class Window
         WINDOW* ptr;
         Window[] children;
         Window parent;
-        bool isKeypad = false;
+        bool isKeypad;
 
     package:
         this(WINDOW* fromPtr, bool setKeypad = true)
@@ -395,11 +397,161 @@ final class Window
                 throw new NCException("Failed to write string '%s' at %s:%s", str, y, x);
         }
 
+        void border(chtype left, chtype right, chtype top, chtype bottom,
+                chtype topLeft, chtype topRight, 
+                chtype bottomLeft, chtype bottomRight)
+        {
+            nc.wborder(ptr, left, right, top, bottom, topLeft, topRight, bottomLeft, bottomRight);
+        }
+
+        void box(chtype vertical, chtype horizontal)
+        {
+            nc.box(ptr, vertical, horizontal);
+        }
+
+        void delch(int y, int x)
+        {
+            if (nc.mvwdelch(ptr, y, x) != OK)
+                throw new NCException("Failed to delete character from position %s:%s", y, x);
+        }
+
+        void delch()
+        {
+            nc.wdelch(ptr);
+        }
+
+        void insert(chtype ch)
+        {
+            nc.winsch(ptr, ch);
+        }
+
+        void insert(int y, int x, chtype ch)
+        {
+            if (nc.mvwinch(ptr, y, x, ch) != OK)
+                throw new NCException("Failed to insert a character at position %s:%s", y, x);
+        }
+
+        void insert(string s)
+        {
+            import std.string;
+            nc.winsstr(ptr, s.toStringz);
+        }
+
+        void insert(int y, int x, string s)
+        {
+            import std.string;
+            if (nc.mvwinsstr(ptr, y, x, s.toStringz) != OK)
+                throw new NCException("Failed to insert a string at position %s:%s", y, x);
+        }
+
+        void insert(string s, int n)
+        {
+            import std.string;
+            nc.winsnstr(ptr, s.toStringz, n);
+        }
+
+        void insert(int y, int x, string s, int n)
+        {
+            import std.string;
+            if (nc.mvwinsnstr(ptr, y, x, s.toStringz, n) != OK)
+                throw new NCException("Failed to insert a string at position %s:%s", y, x);
+        }
+
+        void hline(int y, int x, chtype ch, int n)
+        {
+            if (nc.mvwhline(ptr, y, x, ch, n) != OK)
+                throw new NCException("Failed to draw a horizontal line at %s:%s", y, x);
+        }
+
+        void hline(chtype ch, int n)
+        {
+            nc.whline(ptr, ch, n);
+        }
+
+        /* Overlays this window on top of another (non-destructively). */
+        void overlay(Window target)
+        {
+            if (nc.overlay(ptr, target.ptr) == ERR)
+                throw new NCException("Failed to overlay a window");
+        }
+
+        /* Overwrites this window on top of another (destructively). */
+        void overwrite(Window target)
+        {
+            if (nc.overwrite(ptr, target.ptr) == ERR)
+                throw new NCException("Failed to overwrite a window");
+        }
+
         private void setAttr(A: chtype)(A attr = Attr.normal)
         {
             if (attrset(attr) != OK)
                 throw new NCException("Failed to set attribute '%s'", attr);
         }
+
+        void vline(int y, int x, chtype ch, int n)
+        {
+            if (nc.mvwvline(ptr, y, x, ch, n) != OK)
+                throw new NCException("Failed to draw a vertical line at %s:%s", y, x);
+        }
+
+        void vline(chtype ch, int n)
+        {
+            nc.wvline(ptr, ch, n);
+        }
+
+        /* ---------- various manipulations ---------- */
+
+        void bkgd(chtype ch)
+        {
+            nc.wbkgd(ptr, ch);
+        }
+
+        void bkgdset(chtype ch)
+        {
+            nc.wbkgdset(ptr, ch);
+        }
+
+        void clear()
+        {
+            nc.wclear(ptr);
+        }
+
+        void clearToBottom()
+        {
+            nc.wclrtobot(ptr);
+        }
+
+        void clearToEOL()
+        {
+            nc.wclrtoeol(ptr);
+        }
+
+        void deleteln()
+        {
+            nc.wdeleteln(ptr);
+        }
+
+        void erase()
+        {
+            nc.werase(ptr);
+        }
+
+        void insdel(int n)
+        {
+            nc.winsdelln(n);
+        }
+
+        void insertln()
+        {
+            nc.winsertln(ptr);
+        }
+
+        void scroll(int n)
+        {
+            if (nc.wscrl(ptr, n) != OK)
+                throw new NCException("Failed to scroll a window by %s lines", n);
+        }
+       
 
         /* ---------- information retrieval ---------- */
 
@@ -411,6 +563,15 @@ final class Window
             return res;
         }
 
+        int getcurx()
+        {
+            return nc.getcurx(ptr);
+        }
+        int getcury()
+        {
+            return nc.getcury(ptr);
+        }
+
         string getstr(int maxLength)
         {
             import std.string;
@@ -419,8 +580,85 @@ final class Window
             char* p = &buffer[0];
             if (wgetstr(ptr, p) != OK)
                 throw new Exception("Failed to get a string");
-            /* The cast is safe, it's the only reference to the string. */
-            return cast(string) fromStringz(p);
+            return fromStringz(p).idup;
+        }
+
+        string getstr()
+        {
+            import std.string;
+
+            bool isEcho = Curses.echoMode;
+            noecho();
+            scope(exit) if (isEcho) echo();
+
+            string res;
+            int x = getcurx;
+            int y = getcury;
+            while(true) {
+                int ch = wgetch(ptr);
+                if (ch == ERR) return res;
+                if (ch == '\n' || ch == '\r' || ch == Key.enter) return res;
+                if (ch == '\b' || ch == Key.left || ch == Key.backspace
+                        || ch == killchar || ch == erasechar) {
+                    if (res.length == 0) continue;
+                    res = res[0 .. $ - 1];
+                    /* Delete the character under the cursor and then move it. */
+                    if (!isEcho) continue;
+                    x--;
+                    if (x < 0) {
+                        x = Curses.cols - 1;
+                        y--;
+                    }
+                    if (y < 0) y = 0; 
+                    move(y, x);
+                    delch();
+                    continue;
+                }
+                if (ch > 0xff) {
+                    nc.beep();
+                    continue;
+                }
+                if (ch == '\t') ch = ' '; /* This greatly simplifies deleting
+                                             characters. */
+                addch(ch);
+                x = getcurx;
+                y = getcury;
+                res ~= cast(char) ch;
+            } /* while true */
+        } /* getstr */
+
+        chtype[] inchstr()
+        {
+            import std.algorithm;
+            import std.array;
+
+            auto buffer = new chtype[Curses.lines * Curses.cols + 1];
+            auto p = &buffer[0];
+            winchstr(ptr, p);
+            return buffer.until(0).array.dup;
+        }
+
+        chtype[] inchstr(int n)
+        {
+            import std.algorithm;
+            import std.array;
+            
+            auto buffer = new chtype[Curses.lines * Curses.cols + 1];
+            auto p = &buffer[0];
+            winchnstr(ptr, p, n);
+            return buffer.until(0).array.dup;
+        }
+
+        chtype[] inchstr(int y, int x)
+        {
+            move(y, x);
+            return inchstr;
+        }
+
+        chtype[] inchstr(int y, int x, int n)
+        {
+            move(y, x);
+            return inchstr(n);
         }
 }
 
