@@ -12,7 +12,8 @@ package alias nc = deimos.ncurses; /* Just for convenience. */
 
 /* ---------- base stuff ---------- */
 
-/* The class representing current library state. */
+/* The class representing current library state. Make sure you only have a 
+   single instance of this around. */
 final class Curses
 {
     private:
@@ -22,7 +23,7 @@ final class Curses
 
     public:
         Window stdscr;
-        ColorTable stdColors;
+        ColorTable colors;
         static bool echoMode = true;
 
         /* This struct controls initialization and finalization of the library. */
@@ -56,8 +57,9 @@ final class Curses
                 import std.exception;
                 enforce(has_colors());
                 start_color();
+                colors = new ColorTable;
                 if (config.useStdColors)
-                    stdColors = new ColorTable();
+                    colors.initDefaultColors();
             }
 
             if (config.disableEcho) echo(false);
@@ -192,12 +194,12 @@ final class Curses
             return nc.COLS;
         }
 
-        static int colors()
+        static int maxColors()
         {
             return nc.COLORS;
         }
 
-        static int colorPairs()
+        static int maxColorPairs()
         {
             return nc.COLOR_PAIRS;
         }
@@ -427,33 +429,40 @@ final class Window
 
         void insert(int y, int x, chtype ch)
         {
-            if (nc.mvwinch(ptr, y, x, ch) != OK)
+            if (nc.mvwinsch(ptr, y, x, ch) != OK)
                 throw new NCException("Failed to insert a character at position %s:%s", y, x);
         }
 
+        /* This is unfortunate, but none of 'insstr' family functions accept
+           immutable strings, the result of toStringz. 
+           */
         void insert(string s)
         {
             import std.string;
-            nc.winsstr(ptr, s.toStringz);
+            nc.winsstr(ptr, cast(char*) s.toStringz);
         }
 
         void insert(int y, int x, string s)
         {
             import std.string;
-            if (nc.mvwinsstr(ptr, y, x, s.toStringz) != OK)
+            if (nc.mvwinsstr(ptr, y, x, cast(char*) s.toStringz) != OK)
                 throw new NCException("Failed to insert a string at position %s:%s", y, x);
         }
 
         void insert(string s, int n)
         {
             import std.string;
-            nc.winsnstr(ptr, s.toStringz, n);
+            nc.winsnstr(ptr, cast(char*) s.toStringz, n);
         }
 
         void insert(int y, int x, string s, int n)
         {
             import std.string;
-            if (nc.mvwinsnstr(ptr, y, x, s.toStringz, n) != OK)
+            /* This fails to compile if template parameters list is omitted.
+               Dunno why.
+               */
+            if (nc.mvwinsnstr!(WINDOW, int, char)(ptr, y, x, cast(char*) s.toStringz, n) 
+                    != OK)
                 throw new NCException("Failed to insert a string at position %s:%s", y, x);
         }
 
@@ -538,7 +547,7 @@ final class Window
 
         void insdel(int n)
         {
-            nc.winsdelln(n);
+            nc.winsdelln(ptr, n);
         }
 
         void insertln()
@@ -664,7 +673,46 @@ final class Window
 
 final class ColorTable
 {
+    private:
+        struct Pair { short fg; short bg; }
+        int[Pair] pairs;
 
+    public:
+
+        int opIndex(short fg, short bg)
+        {
+            auto pair = Pair(fg, bg);
+            if (pair in pairs) 
+                return pairs[pair];
+            else 
+                throw new NCException("Combination of colors %s:%s is not in the color table",
+                        fg, bg);
+        }
+
+        void addPair(short fg, short bg)
+        {
+            /* The cast can lead to nasty bugs, but if you need 65k color
+               pairs, you're better off with using SDL or OpenGL or something. */
+            int newPair = init_pair(cast(short) (pairs.length + 1), fg, bg);
+            if (newPair == ERR)
+                throw new NCException("Failed to initialize color pair %s:%s", fg, bg);
+            pairs[Pair(fg, bg)] = newPair;
+        }
+
+        void removePair(short fg, short bg)
+        {
+            auto pair = Pair(fg, bg);
+            if (pair in pairs)
+                pairs.remove(pair);
+        }
+
+        void initDefaultColors()
+        {
+            import std.traits;
+            foreach (colorA; EnumMembers!StdColor) 
+                foreach (colorB; EnumMembers!StdColor) 
+                    addPair(colorA, colorB);
+        }
 }
 
 /* An exception that is thrown on ncurses errors. */
@@ -684,24 +732,36 @@ struct RGB
 
 enum Attr
 {
-    normal = A_NORMAL,
-    charText = A_CHARTEXT,
-    color = A_COLOR,
-    standout = A_STANDOUT,
-    underline = A_UNDERLINE,
-    reverse = A_REVERSE,
-    blink = A_BLINK,
-    dim = A_DIM,
-    bold = A_BOLD,
+    normal     = A_NORMAL,
+    charText   = A_CHARTEXT,
+    color      = A_COLOR,
+    standout   = A_STANDOUT,
+    underline  = A_UNDERLINE,
+    reverse    = A_REVERSE,
+    blink      = A_BLINK,
+    dim        = A_DIM,
+    bold       = A_BOLD,
     altCharSet = A_ALTCHARSET,
-    invis = A_INVIS,
-    protect = A_PROTECT,
+    invis      = A_INVIS,
+    protect    = A_PROTECT,
     horizontal = A_HORIZONTAL,
-    left = A_LEFT,
-    low = A_LOW,
-    right = A_RIGHT,
-    top = A_TOP,
-    vertical = A_VERTICAL,
+    left       = A_LEFT,
+    low        = A_LOW,
+    right      = A_RIGHT,
+    top        = A_TOP,
+    vertical   = A_VERTICAL,
+}
+
+enum StdColor: chtype
+{
+    black   = COLOR_BLACK,
+    red     = COLOR_RED,
+    green   = COLOR_GREEN,
+    yellow  = COLOR_YELLOW,
+    blue    = COLOR_BLUE,
+    magenta = COLOR_MAGENTA,
+    cyan    = COLOR_CYAN,
+    white   = COLOR_WHITE,
 }
 
 enum Key
