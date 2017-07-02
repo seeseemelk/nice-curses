@@ -15,6 +15,7 @@ public import nice.curses;
 class UI
 {
     protected:
+        Curses curses;
         Window window;
         UIElement[] elements;
         int focus;
@@ -28,10 +29,17 @@ class UI
             int[] prevElemKeys = ['\b', '-', Key.ppage];
         }
 
-        this (Config cfg, Window window)
+        this(Curses curses, Window window, Config cfg)
         {
             this.cfg = cfg;
+            this.curses = curses;
             this.window = window;
+        }
+
+        /* Use default config. */
+        this(Curses curses, Window window)
+        {
+            this(curses, window, Config());
         }
 
         /* ---------- manipulation ---------- */
@@ -75,7 +83,7 @@ class UI
         void changeFocus(int by)
         {
             int oldFocus = focus;
-            elements[focus].unfocus();
+            elements[focus].unfocus(curses, window);
             int direction = by > 0 ? +1 : -1;
             /* This will still focus on an unfocusable element if there're 
                only such elements in the UI. */
@@ -86,13 +94,13 @@ class UI
                 if (focus < 0) focus += len;
                 if (focus >= elements.length) focus -= len;
             }
-            elements[focus].focus();
+            elements[focus].focus(curses, window);
         }
 
         /* Ditto. */
         void changeFocus(UIElement newFocused)
         {
-            elements[focus].unfocus();
+            elements[focus].unfocus(curses, window);
             int i;
             foreach (elem; elements) { /* Can't do 'i, elem' since i would then
                                           be size_t. */
@@ -102,7 +110,7 @@ class UI
                 }
                 i++;
             }
-            newFocused.focus();
+            newFocused.focus(curses, window);
         }
 }
 
@@ -125,9 +133,9 @@ abstract class UIElement
         bool focusable = true;
 
         void draw(Window window, bool active);
-        void focus() { /* No-op by default. */ }
-        void unfocus() { /* Also no-op. */ }
-        void keystroke(Curses curses, Window window, int key);
+        void focus(Curses curses, Window window) { /* No-op by default. */ }
+        void unfocus(Curses curses, Window window) { /* Also no-op. */ }
+        void keystroke(Curses curses, Window window, int key) { /* Ditto. */ }
 }
 
 /* This is used to communicate UI events from elements to the processing loop. */
@@ -287,3 +295,64 @@ class StaticButton: UIElement
             throw new Signal();
         }
 } /* StaticButton */
+
+class TextLabel: UIElement
+{
+    private:
+        string delegate() text;
+        Window window;
+
+    public:
+        override void draw(Window otherWindow, bool active)
+        {
+            window.addstr(0, 0, text());
+            window.overlay(otherWindow);
+        }
+
+        this(Curses c, string delegate() text, int x, int y, int w, int h)
+        {
+            super(x, y, w, h);
+            window = c.newWindow(h, w, y, x);
+            this.text = text;
+            focusable = false;
+        }
+}
+
+/* TextInputs are always two spaces high. */
+class TextInput: UIElement
+{
+    private:
+        Config cfg;
+        string caption;
+        string text;
+
+    public:
+        struct Config
+        {
+            int[] enter = ['\n', '\r', Key.enter];
+        }
+
+        this(string caption, Config cfg, int x, int y, int w)
+        {
+            super(x, y, w, 2);
+            this.caption = caption;
+            this.cfg = cfg;
+        }
+
+        override void keystroke(Curses curses, Window window, int key)
+        {
+            import std.algorithm;
+            if (cfg.enter.canFind(key)) {
+                /* Start text editing. */
+                window.move(y, x);
+                text = window.getstr(w);
+            } 
+        }
+
+        override void draw(Window window, bool active)
+        {
+            auto attr = active ? Attr.reverse : Attr.normal;
+            window.addstr(y, x, caption);
+            window.addstr(y + 1, x, text);
+        }
+}
