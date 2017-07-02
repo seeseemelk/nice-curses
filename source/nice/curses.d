@@ -316,7 +316,7 @@ final class Window
 
         void refresh()
         {
-            nc.wrefresh(ptr);
+            nc.wnoutrefresh(ptr);
         }
 
         /* ---------- child windows management ---------- */
@@ -515,7 +515,7 @@ final class Window
 
         private void setAttr(A: chtype)(A attr = Attr.normal)
         {
-            if (attrset(attr) != OK)
+            if (wattrset(ptr, attr) != OK)
                 throw new NCException("Failed to set attribute '%s'", attr);
         }
 
@@ -594,13 +594,34 @@ final class Window
             return res;
         }
 
-        int getcurx()
+        int curX()
         {
             return nc.getcurx(ptr);
         }
-        int getcury()
+
+        int curY()
         {
             return nc.getcury(ptr);
+        }
+
+        int maxX()
+        {
+            return nc.getmaxx(ptr);
+        }
+
+        int maxY()
+        {
+            return nc.getmaxy(ptr);
+        }
+
+        int width()
+        {
+            return maxX + 1;
+        }
+
+        int height()
+        {
+            return maxY + 1;
         }
 
         string getstr(int maxLength)
@@ -623,8 +644,8 @@ final class Window
             scope(exit) if (isEcho) echo();
 
             string res;
-            int x = getcurx;
-            int y = getcury;
+            int x = curX;
+            int y = curY;
             while(true) {
                 int ch = wgetch(ptr);
                 if (ch == ERR) return res;
@@ -652,8 +673,8 @@ final class Window
                 if (ch == '\t') ch = ' '; /* This greatly simplifies deleting
                                              characters. */
                 addch(ch);
-                x = getcurx;
-                y = getcury;
+                x = curX;
+                y = curY;
                 res ~= cast(char) ch;
             } /* while true */
         } /* getstr */
