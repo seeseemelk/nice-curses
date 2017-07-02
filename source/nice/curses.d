@@ -76,7 +76,7 @@ final class Curses
         /* Use default configuration. */
         this()
         {
-            this(Config())
+            this(Config());
         }
 
         /* Finalize the library. Consider adding 
