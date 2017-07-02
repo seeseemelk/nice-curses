@@ -4,3 +4,10 @@ authors "Michail Pevnev"
 copyright "Copyright © 2017, michail"
 license "Boost"
 dependency "ncurses" version="~master" configuration="minimal"
+configuration "full" {
+	targetType "library"
+}
+configuration "minimal" {
+	targetType "library"
+	excludedSourceFiles "source/ui.d"
+}
