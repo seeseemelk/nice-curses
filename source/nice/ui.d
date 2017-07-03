@@ -60,10 +60,8 @@ class UI
                 changeFocus(-1);
             } else {
                 elements[focus].keystroke(key);
-                drawElement(elements[focus], true);
-                window.refresh;
-                curses.update;
             }
+            draw(true);
         }
 
         /* Draws the UI. */
@@ -99,21 +97,18 @@ class UI
         {
             int oldFocus = focus;
             elements[focus].unfocus();
-            drawElement(elements[focus], false);
             int direction = by > 0 ? +1 : -1;
+            int len = cast(int) elements.length;
             /* This will still focus on an unfocusable element if there're 
                only such elements in the UI. */
-            while (!elements[focus].focusable && oldFocus != focus) {
+            do {
                 focus += direction;
                 /* Casts are safe as long as number of elements is reasonable. */
-                int len = cast(int) elements.length;
                 if (focus < 0) focus += len;
                 if (focus >= elements.length) focus -= len;
-            }
+                if (focus == oldFocus) break;
+            } while (!elements[focus].focusable || !elements[focus].visible);
             elements[focus].focus();
-            drawElement(elements[focus], true);
-            window.refresh;
-            curses.update;
         }
 
         /* Change currently active element to a given element. */
@@ -173,7 +168,7 @@ abstract class UISignal: Throwable
 
 class Menu(T): UIElement
 {
-    private:
+    protected:
         string delegate() header;
         int choice;
         int curScroll;
@@ -289,7 +284,7 @@ class Menu(T): UIElement
 
 class Button: UIElement
 {
-    private:
+    protected:
         string delegate() text;
         Config cfg;
 
@@ -327,17 +322,7 @@ class Button: UIElement
         override void draw(bool active)
         {
             auto attr = active ? Attr.reverse : Attr.normal;
-            final switch (cfg.alignment) {
-                case Align.left: 
-                    window.addAligned(0, 0, text(), Align.left, attr);
-                    break;
-                case Align.center:
-                    window.addAligned(0, window.width / 2, text(), Align.center, attr);
-                    break;
-                case Align.right:
-                    window.addAligned(0, window.maxX, text(), Align.right, attr);
-                    break;
-            }
+            window.addAligned(0, text(), cfg.alignment, attr);
         }
 
         override void keystroke(int key)
@@ -345,5 +330,179 @@ class Button: UIElement
             import std.algorithm;
             if (cfg.enter.canFind(key))
                 throw new Signal();
+        }
+}
+
+class Label: UIElement
+{
+    protected:
+        string delegate() text;
+        Config cfg;
+
+    public:
+        struct Config
+        {
+            Align alignment = Align.left;
+            int attribute = Attr.normal;
+        }
+
+        this(UI ui, int nlines, int ncols, int y, int x,
+                string delegate() text,
+                Config cfg = Config())
+        {
+            super(ui, nlines, ncols, y, x);
+            this.text = text;
+            this.cfg = cfg;
+            focusable = false;
+        }
+
+        this(UI ui, int nlines, int ncols, int y, int x, string text,
+                Config cfg = Config())
+        {
+            string dg() { return text; }
+            this(ui, nlines, ncols, y, x, &dg, cfg);
+        }
+
+        /* ---------- inherited stuff ---------- */
+
+        override void draw(bool active)
+        {
+            window.addAligned(0, text(), cfg.alignment, cfg.attribute);
+        }
+}
+
+class ProgressBar: UIElement
+{
+    protected:
+        Config cfg;
+        double percentage_ = 0;
+
+    public:
+        struct Config
+        {
+            char empty = '-';
+            char filled = '#';
+            int emptyAttr = Attr.normal;
+            int filledAttr = Attr.normal;
+            bool vertical = false;
+            bool reverse = false;
+        }
+
+        this(UI ui, int nlines, int ncols, int y, int x, Config cfg = Config())
+        {
+            super(ui, nlines, ncols, y, x);
+            this.cfg = cfg;
+            focusable = false;
+        }
+
+        double percentage() const @property { return percentage_; }
+        void percentage(double p) @property 
+        { 
+            if (p < 0) p = 0;
+            if (p > 1) p = 1;
+            percentage_ = p; 
+        }
+
+        /* ---------- inherited stuff ---------- */
+
+        override void draw(bool active)
+        {
+            if (cfg.vertical) {
+                int n = cast(int) (window.height * percentage);
+                if (cfg.reverse) {
+                    /* Fill from the top downwards. */
+                    foreach (y; 0 .. n) 
+                        foreach (x; 0 .. window.width)
+                            window.addch(y, x, cfg.filled, cfg.filledAttr);
+                    foreach (y; n .. window.height)
+                        foreach (x; 0 .. window.width)
+                            window.addch(y, x, cfg.empty, cfg.emptyAttr);
+                } else {
+                    /* Fill from the bottom up. */
+                    foreach (k; 1 .. n + 1)
+                        foreach (x; 0 .. window.width)
+                            window.addch(window.height - k, x, cfg.filled, cfg.filledAttr);
+                    foreach (k; n + 1 .. window.height + 1)
+                        foreach (x; 0 .. window.width)
+                            window.addch(window.height - k, x, cfg.empty, cfg.emptyAttr);
+                }
+            } else {
+                int n = cast(int) (window.width * percentage);
+                if (cfg.reverse) {
+                    /* Fill from the right to the left. */
+                    foreach (k; 1 .. n)
+                        foreach (y; 0 .. window.height)
+                            window.addch(y, window.width - k, cfg.filled, cfg.filledAttr);
+                    foreach (k; n + 1 .. window.width + 1)
+                        foreach (y; 0 .. window.height)
+                            window.addch(y, window.width - k, cfg.empty, cfg.emptyAttr);
+                } else {
+                    /* Fill from the left to the right. */
+                    foreach (x; 0 .. n)
+                        foreach (y; 0 .. window.height)
+                            window.addch(y, x, cfg.filled, cfg.filledAttr);
+                    foreach (x; n .. window.width)
+                        foreach (y; 0 .. window.height)
+                            window.addch(y, x, cfg.empty, cfg.emptyAttr);
+                }
+            } /* if vertical */
+        } /* draw */
+}
+
+class TextInput: UIElement
+{
+    protected:
+        string text;
+        Config cfg;
+        int scroll;
+
+    public:
+        /* Thrown when the user finishes typing. */
+        class Signal: UISignal
+        {
+            string text;
+
+            this(string text)
+            { 
+                super(this.outer);
+                this.text = text;
+            }
+        }
+
+        struct Config
+        {
+            int[] start = ['\n', '\r', 'i', Key.enter];
+            string emptyText = "<empty>";
+        }
+
+        this(UI ui, int nlines, int ncols, int y, int x, string initialText,
+                Config cfg = Config())
+        {
+            super(ui, nlines, ncols, y, x);
+            text = initialText;
+            this.cfg = cfg;
+        }
+
+        /* ---------- inherited stuff ---------- */
+
+        override void keystroke(int key)
+        {
+            import std.algorithm;
+            if (!cfg.start.canFind(key)) return;
+
+            window.erase;
+            window.move(0, 0);
+            string str = window.getstr;
+            text = str;
+            throw new Signal(str);
+        } 
+
+        override void draw(bool active)
+        {
+            auto attr = active ? Attr.reverse : Attr.normal;
+            if (text != "")
+                window.addstr(0, 0, text, attr);
+            else
+                window.addstr(0, 0, cfg.emptyText, attr);
         }
 }

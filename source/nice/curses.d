@@ -119,17 +119,17 @@ final class Curses
 
         /* ---------- general commands ---------- */
 
-        void beep()
+        static void beep()
         {
             nc.beep();
         }
 
-        void delayOutput(int ms)
+        static void delayOutput(int ms)
         {
             nc.delay_output(ms);
         }
 
-        void echo(bool set)
+        static void echo(bool set)
         {
             if (set)
                 nc.echo();
@@ -138,32 +138,32 @@ final class Curses
             Curses.echoMode = set;
         }
 
-        void flash()
+        static void flash()
         {
             nc.flash();
         }
 
-        void flushInput()
+        static void flushInput()
         {
             nc.flushinp();
         }
 
-        void nap(int ms)
+        static void nap(int ms)
         {
             nc.napms(ms);
         }
 
-        void resetTTY()
+        static void resetTTY()
         {
             nc.resetty();
         }
 
-        void saveTTY()
+        static void saveTTY()
         {
             nc.savetty();
         }
 
-        void setCursor(int level)
+        static void setCursor(int level)
         {
             nc.curs_set(level);
         }
@@ -179,12 +179,12 @@ final class Curses
             curMode = mode;
         }
 
-        void ungetch(int ch)
+        static void ungetch(int ch)
         {
             nc.ungetch(ch);
         }
 
-        void update()
+        static void update()
         {
             nc.doupdate();
         }
@@ -362,7 +362,11 @@ final class Window
             import std.format;
 
             setAttr(attr);
-            if (nc.mvwaddch(ptr, y, x, ch) != OK)
+            /* addch fails when called on lower-right corner. Gotta compensate
+               for that. Ugh.
+               */
+            bool isLowerRight = (y == height - 1) && (x == width - 1);
+            if (nc.mvwaddch(ptr, y, x, ch) != OK && !isLowerRight)
                 throw new NCException("Failed to add character '%s' at %s:%s", ch, y, x);
         }
 
@@ -370,7 +374,8 @@ final class Window
         {
             import std.format;
             setAttr(attr);
-            if (nc.waddch(ptr, ch) != OK)
+            bool isLowerRight = (curY == height - 1) && (curX == width - 1);
+            if (nc.waddch(ptr, ch) != OK && !isLowerRight)
                 throw new NCException("Failed to add character '%s'", ch);
         }
 
@@ -429,7 +434,7 @@ final class Window
             import std.algorithm;
 
             final switch (alignment) {
-                case Align.left: {
+                case Align.left: 
                     while (y < height && str != "") {
                         int w = min(width - x, cast(int) str.length);
                         addnstr(y, x, str, w, attr);
@@ -437,8 +442,7 @@ final class Window
                         str = str[w .. $];
                     }
                     break;
-                }
-                case Align.center: {
+                case Align.center: 
                     while (y < height && str != "") {
                         int w = min(2 * x, 2 * (width - x), cast(int) str.length);
                         addnstr(y, x - w / 2, str, w, attr);
@@ -446,15 +450,13 @@ final class Window
                         str = str[w .. $];
                     }
                     break;
-                }
-                case Align.right: {
+                case Align.right: 
                     while (y < height && str != "") {
                         int w = min(x, cast(int) str.length);
                         addnstr(y, x - w, str, w, attr);
                         y++;
                         str = str[w .. $];
                     }
-                }
             } /* switch alignment */
         } /* addAligned */
 
@@ -659,17 +661,21 @@ final class Window
 
         int width() @property
         {
-            return nc.getmaxx(ptr);
+            return nc.getmaxx(ptr) + 1;
         }
 
         int height() @property
         {
-            return nc.getmaxy(ptr);
+            return nc.getmaxy(ptr) + 1;
         }
 
-        string getstr(int maxLength)
+        string getstr(int maxLength, bool echoChars = true)
         {
             import std.string;
+
+            bool isEcho = Curses.echoMode;
+            Curses.echo(echoChars);
+            scope(exit) Curses.echo(isEcho);
 
             char[] buffer = new char[maxLength + 1];
             char* p = &buffer[0];
@@ -678,13 +684,13 @@ final class Window
             return fromStringz(p).idup;
         }
 
-        string getstr()
+        string getstr(bool echoChars = true)
         {
             import std.string;
 
             bool isEcho = Curses.echoMode;
-            noecho();
-            scope(exit) if (isEcho) echo();
+            Curses.echo(false);
+            scope(exit) Curses.echo(isEcho);
 
             string res;
             int x = curX;
@@ -698,24 +704,26 @@ final class Window
                     if (res.length == 0) continue;
                     res = res[0 .. $ - 1];
                     /* Delete the character under the cursor and then move it. */
-                    if (!isEcho) continue;
+                    if (!echoChars) continue;
                     x--;
                     if (x < 0) {
                         x = Curses.cols - 1;
                         y--;
                     }
                     if (y < 0) y = 0; 
-                    move(y, x);
-                    delch();
+                    delch(y, x);
                     continue;
                 }
+                /* Only allow deleting characters and finishing the input if
+                   at the end of the window. */
+                if (x == width - 1 && y == height - 1) continue;
                 if (ch > 0xff) {
                     nc.beep();
                     continue;
                 }
                 if (ch == '\t') ch = ' '; /* This greatly simplifies deleting
                                              characters. */
-                addch(ch);
+                if (echoChars) addch(ch);
                 x = curX;
                 y = curY;
                 res ~= cast(char) ch;
