@@ -5,3 +5,9 @@ copyright "Copyright © 2017, michail"
 license "Boost"
 dependency "ncurses" version="~master" configuration="minimal"
 targetType "library"
+
+configuration "full" { 
+}
+configuration "minimal" { 
+	excludedSourceFiles "source/nice/ui.d"
+}
