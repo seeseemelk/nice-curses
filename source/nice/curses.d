@@ -440,7 +440,7 @@ final class Window
                 }
                 case Align.center: {
                     while (y < height && str != "") {
-                        int w = min(x, width - x, cast(int) str.length);
+                        int w = min(2 * x, 2 * (width - x), cast(int) str.length);
                         addnstr(y, x - w / 2, str, w, attr);
                         y++;
                         str = str[w .. $];
