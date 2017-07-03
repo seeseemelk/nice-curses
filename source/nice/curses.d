@@ -458,6 +458,22 @@ final class Window
             } /* switch alignment */
         } /* addAligned */
 
+        /* Use the whole window and figure out exact X coordinate. */
+        void addAligned(A: chtype)(int y, string str, Align alignment, A attr = Attr.normal)
+        {
+            final switch(alignment) {
+                case Align.left:
+                    addAligned(y, 0, str, alignment, attr);
+                    break;
+                case Align.center:
+                    addAligned(y, width / 2, str, alignment, attr);
+                    break;
+                case Align.right:
+                    addAligned(y, maxX, str, alignment, attr);
+                    break;
+            }
+        }
+
         void border(chtype left, chtype right, chtype top, chtype bottom,
                 chtype topLeft, chtype topRight, 
                 chtype bottomLeft, chtype bottomRight)
