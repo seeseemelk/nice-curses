@@ -316,7 +316,7 @@ final class Window
 
         void refresh()
         {
-            nc.wrefresh(ptr);
+            nc.wnoutrefresh(ptr);
         }
 
         /* ---------- child windows management ---------- */
@@ -410,16 +410,53 @@ final class Window
                 throw new NCException("Failed to write string '%s'", str);
         }
 
-        /* Add a centered string. */
-        void addstrc(A: chtype)(int y, int x, string str, A attr = Attr.normal)
-        {
-            x -= cast(int) str.length / 2;
-            if (x < 0) 
-                throw new NCException("Attempted to print a centered string too" ~
-                        " close to the left border");
+        /* This will silently drop any characters that don't fit into the 
+           window. 
 
-            addstr(y, x, str, attr);
-        }
+           The exact behavious depends on the 'alignment' parameter.
+           If it's Align.left, then y and x are the coordinates of text's
+           upper left corner.
+           If it's Align.center, then they are the coordinates of text's first
+           line's center.
+           If it's Align.right, then they are the coordinates of text's upper
+           right corner.
+
+           Note that this method uses the entire window.
+         */
+        void addAligned(A: chtype)(int y, int x, string str, 
+                Align alignment, A attr = Attr.normal)
+        {
+            import std.algorithm;
+
+            final switch (alignment) {
+                case Align.left: {
+                    while (y < height && str != "") {
+                        int w = min(width - x, cast(int) str.length);
+                        addnstr(y, x, str, w, attr);
+                        y++;
+                        str = str[w .. $];
+                    }
+                    break;
+                }
+                case Align.center: {
+                    while (y < height && str != "") {
+                        int w = min(x, width - x, cast(int) str.length);
+                        addnstr(y, x - w / 2, str, w, attr);
+                        y++;
+                        str = str[w .. $];
+                    }
+                    break;
+                }
+                case Align.right: {
+                    while (y < height && str != "") {
+                        int w = min(x, cast(int) str.length);
+                        addnstr(y, x - w, str, w, attr);
+                        y++;
+                        str = str[w .. $];
+                    }
+                }
+            } /* switch alignment */
+        } /* addAligned */
 
         void border(chtype left, chtype right, chtype top, chtype bottom,
                 chtype topLeft, chtype topRight, 
@@ -515,7 +552,7 @@ final class Window
 
         private void setAttr(A: chtype)(A attr = Attr.normal)
         {
-            if (attrset(attr) != OK)
+            if (wattrset(ptr, attr) != OK)
                 throw new NCException("Failed to set attribute '%s'", attr);
         }
 
@@ -968,4 +1005,11 @@ enum Key
     resize    = KEY_RESIZE,
     event     = KEY_EVENT,
     max       = KEY_MAX,
+}
+
+enum Align
+{
+    left,
+    center,
+    right
 }
