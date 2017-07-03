@@ -432,7 +432,7 @@ final class Window
                 case Align.left: {
                     while (y < height && str != "") {
                         int w = min(width - x, cast(int) str.length);
-                        addnstr(y, x, str[0 .. w], attr);
+                        addnstr(y, x, str, w, attr);
                         y++;
                         str = str[w .. $];
                     }
@@ -441,7 +441,7 @@ final class Window
                 case Align.center: {
                     while (y < height && str != "") {
                         int w = min(x, width - x, cast(int) str.length);
-                        addnstr(y, x - w / 2, str[0 .. w], attr);
+                        addnstr(y, x - w / 2, str, w, attr);
                         y++;
                         str = str[w .. $];
                     }
@@ -450,7 +450,7 @@ final class Window
                 case Align.right: {
                     while (y < height && str != "") {
                         int w = min(x, cast(int) str.length);
-                        addnstr(y, x - w, str[0 .. w], attr);
+                        addnstr(y, x - w, str, w, attr);
                         y++;
                         str = str[w .. $];
                     }
