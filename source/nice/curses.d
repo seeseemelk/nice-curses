@@ -217,29 +217,29 @@ final class Curses
 
         /* ---------- information retrieval ---------- */
 
-        int baudrate() const @property
+        static int baudrate()
         {
             return nc.baudrate();
         }
 
-        bool canChangeColor() const @property
+        static bool canChangeColor()
         {
             return nc.can_change_color();
         }
 
-        RGB colorContent(short color) const @property
+        static RGB colorContent(short color)
         {
             short r, g, b;
             color_content(color, &r, &g, &b);
             return RGB(r, g, b);
         }
 
-        bool hasColors() const @property
+        static bool hasColors()
         {
             return nc.has_colors();
         }
 
-        string keyName(int key) const @property
+        static string keyName(int key)
         {
             import std.string;
             return nc.keyname(key).fromStringz.idup;
@@ -730,6 +730,7 @@ final class Window
             import std.array;
 
             auto buffer = new chtype[Curses.lines * Curses.cols + 1];
+            buffer[$ - 1] = 0;
             auto p = &buffer[0];
             winchstr(ptr, p);
             return buffer.until(0).array.dup;
@@ -740,7 +741,8 @@ final class Window
             import std.algorithm;
             import std.array;
             
-            auto buffer = new chtype[Curses.lines * Curses.cols + 1];
+            auto buffer = new chtype[n + 1];
+            buffer[$ - 1] = 0;
             auto p = &buffer[0];
             winchnstr(ptr, p, n);
             return buffer.until(0).array.dup;
