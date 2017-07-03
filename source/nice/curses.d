@@ -48,7 +48,7 @@ final class Curses
         }
 
         /* Initialize the library. */
-        this(Config config)
+        this(Config config = Config())
         {
             cfg = config;
 
@@ -71,12 +71,6 @@ final class Curses
                 nc.nl();
             else
                 nc.nonl();
-        }
-
-        /* Use default configuration. */
-        this()
-        {
-            this(Config());
         }
 
         /* Finalize the library. Consider adding 
