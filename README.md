@@ -29,12 +29,12 @@ A Curses.Config struct has following fields:
 - `bool useStdColors = true` - set this to fill `colors` ColorTable field of a
   Curses object with color pairs of default colors.
 - `bool disableEcho = false` - set this to enter noecho mode;
-- `Mode mode = Mode.normal` - choose one of the terminal modes:
+- `Mode mode = Mode.normal` - choose one of the terminal modes (consult your
+  ncurses documentation for difference between them):
 	- normal
 	- cbreak
 	- halfdelay
 	- raw
-Consult your ncurses documentation for difference between modes.
 - `int cursLevel = 1` - set cursor visibility. 0 means invisible, 1 means
   normal and 2 means very visible.
 - `bool initKeypad = true` - set this to make all spawned windows to enter
