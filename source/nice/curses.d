@@ -469,7 +469,7 @@ final class Window
                     addAligned(y, width / 2, str, alignment, attr);
                     break;
                 case Align.right:
-                    addAligned(y, maxX, str, alignment, attr);
+                    addAligned(y, width - 1, str, alignment, attr);
                     break;
             }
         }
