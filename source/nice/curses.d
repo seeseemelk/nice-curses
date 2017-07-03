@@ -647,34 +647,24 @@ final class Window
             return res;
         }
 
-        int curX()
+        int curX() @property
         {
             return nc.getcurx(ptr);
         }
 
-        int curY()
+        int curY() @property
         {
             return nc.getcury(ptr);
         }
 
-        int maxX()
+        int width() @property
         {
             return nc.getmaxx(ptr);
         }
 
-        int maxY()
+        int height() @property
         {
             return nc.getmaxy(ptr);
-        }
-
-        int width()
-        {
-            return maxX + 1;
-        }
-
-        int height()
-        {
-            return maxY + 1;
         }
 
         string getstr(int maxLength)
