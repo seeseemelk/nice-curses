@@ -765,35 +765,95 @@ final class ColorTable
 {
     private:
         struct Pair { short fg; short bg; }
-        int[Pair] pairs;
+
+        Pair[short] pairs; /* A mapping from pair indices to pairs. */
+        chtype[Pair] attrs; /* A mapping from pairs to attributes. */
+        short[] reusablePairs;
+        short latestPair = 1;
+
+        short latestColor = StdColor.max + 1;
+        short[] reusableColors;
 
     public:
 
-        int opIndex(short fg, short bg)
+        /* Indexing a color table returns an attribute which a color pair 
+           represents. */
+        chtype opIndex(short fg, short bg)
         {
             auto pair = Pair(fg, bg);
-            if (pair in pairs) 
-                return pairs[pair];
+            if (pair in attrs) 
+                return attrs[pair];
             else 
                 throw new NCException("Combination of colors %s:%s is not in the color table",
                         fg, bg);
         }
 
-        void addPair(short fg, short bg)
+        /* Alternatively, you can use a pair index to get an attribute. */
+        chtype opIndex(short pairIndex)
         {
-            /* The cast can lead to nasty bugs, but if you need 65k color
-               pairs, you're better off with using SDL or OpenGL or something. */
-            int newPair = init_pair(cast(short) (pairs.length + 1), fg, bg);
-            if (newPair == ERR)
-                throw new NCException("Failed to initialize color pair %s:%s", fg, bg);
-            pairs[Pair(fg, bg)] = newPair;
+            if (pairIndex in pairs)
+                return attrs[pairs[pairIndex]];
+            else
+                throw new NCException("Color pair #%s is not in the color table", pairIndex);
         }
 
-        void removePair(short fg, short bg)
+        /* Return the index of a newly created pair. */
+        short addPair(short fg, short bg)
         {
-            auto pair = Pair(fg, bg);
-            if (pair in pairs)
-                pairs.remove(pair);
+            bool addNew = reusablePairs == [];
+            short pair;
+            if (addNew) 
+                pair = latestPair;
+            else
+                pair = reusablePairs[0];
+            if (init_pair(pair, fg, bg) != OK)
+                throw new NCException("Failed to initialize color pair %s:%s", fg, bg);
+
+            auto p = Pair(fg, bg);
+            pairs[pair] = p;
+            attrs[p] = COLOR_PAIR(pair);
+            if (addNew)
+                latestPair++;
+            else
+                reusablePairs = reusablePairs[1 .. $];
+            return pair;
+        }
+
+        /* Return the index of a newly defined color. */
+        short addColor(short r, short g, short b)
+        {
+            bool addNew = reusableColors == [];
+            short color;
+            if (addNew)
+                color = latestColor;
+            else
+                color = reusableColors[0];
+            if (init_color(color, r, g, b) != OK)
+                throw new NCException("Failed to initialize a color with RGB content " ~
+                        "%s:%s:%s", r, g, b);
+            if (addNew)
+                latestColor++;
+            else
+                reusableColors = reusableColors[1 .. $];
+            return color;
+        }
+
+        /* Ditto. */
+        short addColor(RGB color)
+        {
+            return addColor(color.r, color.g, color.b);
+        }
+
+        /* Mark a pair as available for overwriting. It doesn't actually
+           undefine it or anything, there's no way to do that. */
+        void removePair(short pairIndex)
+        {
+            if (pairIndex !in pairs)
+                throw new NCException("Attempted to remove color pair #%s, which is " ~
+                        "not in the color table to begin with", pairIndex);
+            reusablePairs ~= pairIndex;
+            attrs.remove(pairs[pairIndex]);
+            pairs.remove(pairIndex);
         }
 
         void initDefaultColors()
