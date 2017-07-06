@@ -58,9 +58,7 @@ final class Curses
                 import std.exception;
                 enforce(has_colors());
                 start_color();
-                colors = new ColorTable;
-                if (config.useStdColors)
-                    colors.initDefaultColors();
+                colors = new ColorTable(config.useStdColors);
                 stdscr.colors = colors;
             }
 
@@ -772,10 +770,20 @@ final class ColorTable
         short[] reusablePairs;
         short latestPair = 1;
 
-        short latestColor = StdColor.max + 1;
+        short latestColor;
         short[] reusableColors;
 
     public:
+
+        this(bool useStdColors)
+        {
+            if (useStdColors) {
+                latestColor = StdColors.max + 1;
+                initDefaultColors;
+            } else {
+                latestColor = 1;
+            }
+        }
 
         /* Indexing a color table returns an attribute which a color pair 
            represents. */
