@@ -778,7 +778,7 @@ final class ColorTable
         this(bool useStdColors)
         {
             if (useStdColors) {
-                latestColor = StdColors.max + 1;
+                latestColor = StdColor.max + 1;
                 initDefaultColors;
             } else {
                 latestColor = 1;
