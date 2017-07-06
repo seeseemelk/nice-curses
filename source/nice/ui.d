@@ -49,19 +49,24 @@ class UI
 
         /* ---------- manipulation ---------- */
 
-        /* Processes a keystroke. */
-        void keystroke(int key)
+        /* Processes a keystroke. Returns true if keystroke was processed by 
+           the UI or an element. */
+        bool keystroke(int key)
         {
             import std.algorithm;
 
+            bool res = false;
             if (cfg.nextElemKeys.canFind(key)) {
                 changeFocus(+1);
+                res = true;
             } else if (cfg.prevElemKeys.canFind(key)) {
                 changeFocus(-1);
+                res = true;
             } else {
-                elements[focus].keystroke(key);
+                res = elements[focus].keystroke(key);
             }
             draw(true);
+            return res;
         }
 
         /* Draws the UI. */
@@ -149,7 +154,8 @@ abstract class UIElement
         void draw(bool active);
         void focus() { /* No-op by default. */ }
         void unfocus() { /* Also no-op. */ }
-        void keystroke(int key) { /* Ditto. */ }
+        /* Should return true if a keypress has been processed. */
+        bool keystroke(int key) { return false; }
 }
 
 /* This is used to communicate UI events from elements to the processing loop. */
@@ -269,16 +275,19 @@ class Menu(T): UIElement
             }
         }
 
-        override void keystroke(int key) 
+        override bool keystroke(int key) 
         {
             import std.algorithm;
             if (cfg.down.canFind(key)) {
                 choose(+1);
+                return true;
             } else if (cfg.up.canFind(key)) {
                 choose(-1);
+                return true;
             } else if (cfg.enter.canFind(key)) {
                 throw new Signal();
             }
+            return false;
         }
 }
 
@@ -325,11 +334,12 @@ class Button: UIElement
             window.addAligned(0, text(), cfg.alignment, attr);
         }
 
-        override void keystroke(int key)
+        override bool keystroke(int key)
         {
             import std.algorithm;
             if (cfg.enter.canFind(key))
                 throw new Signal();
+            return false;
         }
 }
 
@@ -485,10 +495,10 @@ class TextInput: UIElement
 
         /* ---------- inherited stuff ---------- */
 
-        override void keystroke(int key)
+        override bool keystroke(int key)
         {
             import std.algorithm;
-            if (!cfg.start.canFind(key)) return;
+            if (!cfg.start.canFind(key)) return false;
 
             window.erase;
             window.move(0, 0);
@@ -504,5 +514,101 @@ class TextInput: UIElement
                 window.addstr(0, 0, text, attr);
             else
                 window.addstr(0, 0, cfg.emptyText, attr);
+        }
+}
+
+class CheckBox: UIElement
+{
+    protected:
+        string delegate() text;
+        Config cfg;
+        Window textWindow;
+        Window markWindow;
+
+    public:
+        bool checked;
+
+        /* Thrown when the user checks/unchecks the box. */
+        class Signal: UISignal
+        {
+            bool checked;
+            this()
+            {
+                super(this.outer);
+                checked = this.outer.checked;
+            }
+        }
+
+        struct Config
+        {
+            char whenChecked = '+';
+            char whenUnchecked = '-';
+            int[] switchKeys = ['\n', '\r', Key.enter];
+            /* Denotes the position of checked/unchecked mark. Note that the
+               element should be at least 4 cells wide for left and right
+               alignments and at least 2 cells high for central alignment. */
+            Align alignment = Align.left; 
+        }
+
+        this(UI ui, int nlines, int ncols, int y, int x, 
+                string delegate() text, Config cfg = Config())
+        {
+            super(ui, nlines, ncols, y, x);
+            this.text = text;
+            this.cfg = cfg;
+            enum width = 3;
+            final switch (cfg.alignment) {
+                case Align.left:
+                    markWindow = window.derwin(nlines, width, 0, 0);
+                    textWindow = window.derwin(nlines, ncols - width, 0, width);
+                    break;
+                case Align.center:
+                    markWindow = window.derwin(1, ncols, nlines - 1, 0);
+                    textWindow = window.derwin(nlines - 1, ncols, 0, 0);
+                    break;
+                case Align.right:
+                    markWindow = window.derwin(nlines, width, 0, ncols - width);
+                    textWindow = window.derwin(nlines, ncols - width, 0, 0);
+                    break;
+            }
+        }
+
+        this(UI ui, int nlines, int ncols, int y, int x,
+                string text, Config cfg = Config())
+        {
+            string dg() { return text; }
+            this(ui, nlines, ncols, y, x, &dg, cfg);
+        }
+
+        /* ---------- inherited stuff ---------- */
+
+        override bool keystroke(int key)
+        {
+            import std.algorithm;
+            if (cfg.switchKeys.canFind(key)) {
+                checked = !checked;
+                throw new Signal();
+            }
+            return false;
+        }
+
+        override void draw(bool active)
+        {
+            auto attr = active ? Attr.reverse : Attr.normal;
+            char mark = checked ? cfg.whenChecked : cfg.whenUnchecked;
+            final switch (cfg.alignment) {
+                case Align.left:
+                    markWindow.addch(markWindow.height / 2, 1, mark);
+                    textWindow.addAligned(textWindow.height / 2, text(), Align.left, attr);
+                    break;
+                case Align.center:
+                    markWindow.addch(0, markWindow.width / 2, mark);
+                    textWindow.addAligned(0, text(), Align.center, attr);
+                    break;
+                case Align.right:
+                    markWindow.addch(markWindow.height / 2, 1, mark);
+                    textWindow.addAligned(textWindow.height / 2, text(), Align.right, attr);
+                    break;
+            }
         }
 }
