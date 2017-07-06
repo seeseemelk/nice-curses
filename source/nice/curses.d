@@ -7,6 +7,7 @@
 module nice.curses;
 
 import deimos.ncurses;
+public import deimos.ncurses: chtype;
 
 package alias nc = deimos.ncurses; /* Just for convenience. */
 
@@ -819,18 +820,30 @@ final class ColorTable
             return pair;
         }
 
+        /* Redefine a color. */
+        void redefineColor(short color, short r, short g, short b)
+        {
+            if (color >= Curses.maxColors)
+                throw new NCException("A color with index %s requested, but the " ~
+                        "terminal supports only %s colors", color, Curses.maxColors);
+            if (init_color(color, r, g, b) != OK)
+                throw new NCException("Failed to initialize a color #%s with RGB content " ~
+                        "%s:%s:%s", color, r, g, b);
+        }
+
         /* Return the index of a newly defined color. */
         short addColor(short r, short g, short b)
         {
+            if (!Curses.canChangeColor)
+                throw new NCException("The terminal doesn't support changing colors");
+
             bool addNew = reusableColors == [];
             short color;
             if (addNew)
                 color = latestColor;
             else
                 color = reusableColors[0];
-            if (init_color(color, r, g, b) != OK)
-                throw new NCException("Failed to initialize a color with RGB content " ~
-                        "%s:%s:%s", r, g, b);
+            redefineColor(color, r, g, b);
             if (addNew)
                 latestColor++;
             else
@@ -854,6 +867,12 @@ final class ColorTable
             reusablePairs ~= pairIndex;
             attrs.remove(pairs[pairIndex]);
             pairs.remove(pairIndex);
+        }
+
+        /* Mark a color as available for overwriting. */
+        void removeColor(short color)
+        {
+            reusableColors ~= color;
         }
 
         void initDefaultColors()
