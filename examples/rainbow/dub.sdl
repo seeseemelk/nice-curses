@@ -1,0 +1,6 @@
+name "rainbow"
+description "An example showcasing using custom colors."
+authors "Michail Pevnev"
+copyright "Copyright © 2017, michail"
+license "Boost"
+dependency "nice-curses" path="../../"
