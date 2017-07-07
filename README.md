@@ -204,20 +204,35 @@ being typed.
 
 ## class ColorTable
 A ColorTable object stores information about defined colors and color pairs.
-It can be indexed by two `short`s: foreground color's index and background
-color's index, yielding an attribute to use with `addch` and friends:
-    int attribute = colorTable[fg, bg];
-A new color pair can be added via `void addPair(short fg, short bg)` method.
-A color pair can be removed via `void removePair(short fg, short bg)` method.
-You can also fill the table with all the pairs of the default colors (which are
-given in StdColor enum) with `void initDefaultColors()`. If the library is 
-initialized with `useStdColors = true` then this method will be called.
+It can be indexed in two ways: 
+- By a pair of `short`s: the first is foreground color index, the second is
+  background.
+- By a single `short`: it is a color pair index.
+Indexing yields an attribute that can be used as a parameter to `addch`,
+`addstr` and the like. It may throw an exception if a requested pair is not in
+the table.
+
+Apart of this, a ColorTable object has following methods:
+- `short addPair(short fg, short bg)` - define a new color pair and return its
+  index. Throws an exception if a new pair cannot be added.
+- `void redefineColor(short color, short r, short g, short b)` - redefine a 
+  color with given index. Throws an exception if the color cannot be redefined.
+- `short addColor(short r, short g, short b)` - add a new color with given RGB
+  content. Return the index of the new color. Throws an exception if a new
+  color cannot be added.
+- `short addColor(RGB color)` - same.
+- `void removePair(short pairIndex)` - mark a pair for overwriting.
+- `void removeColor(short colorIndex)` - mark a color for overwriting.
+- `void initDefaultColors()` - initialize color pairs from StdColor enum. This
+  is called if you request standard colors in Curses configuration.
 
 ## Helper things
 
 ### struct RGB
-Used to represent colors. Using non-default colors is not supported yet, so 
-this is of very limited use.
+Used to represent colors. Has three fields:
+- `short r` - the red component.
+- `short g` - the green component.
+- `short b` - the blue component.
 
 ### enum Attr
 A set of possible (and binary OR-able) attributes for drawing characters. 
