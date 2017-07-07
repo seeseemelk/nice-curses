@@ -193,9 +193,12 @@ These are for retrieving information from the window.
 - `int height()` - get the height of the window.
 - `string getstr(int maxLength, bool echoChars = true)` - get a string of 
   characters at most `maxLength` long. May or may not echo the characters
-being typed.
+  being typed.
 - `string getstr(bool echoChars = true)` - get a string of characters. May or
   may not echo the characters being typed. 
+- `string getstr(bool delegate(int) predicate, bool echoChars = true)` - get a
+  string of characters, blocking all keys such that the given predicate returns
+  false on them. May or may not echo the characters being typed. 
 - `chtype[] inchstr()` - get an array of characters and attributes from the 
   cursor to the right margin of the window.
 - `chtype[] inchstr(int n)` - same, but limit the maximum amount of the 

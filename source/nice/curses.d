@@ -687,6 +687,11 @@ final class Window
 
         string getstr(bool echoChars = true)
         {
+            return getstr(ch => ch <= 0xff, echoChars);
+        }
+
+        string getstr(bool delegate(int) predicate, bool echoChars = true)
+        {
             import std.string;
 
             bool isEcho = Curses.echoMode;
@@ -718,7 +723,7 @@ final class Window
                 /* Only allow deleting characters and finishing the input if
                    at the end of the window. */
                 if (x == width - 1 && y == height - 1) continue;
-                if (ch > 0xff) {
+                if (!predicate(ch)) {
                     nc.beep();
                     continue;
                 }
