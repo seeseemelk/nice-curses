@@ -275,10 +275,10 @@ A set of default colors:
 
 ### enum Key
 A set of constants that `getch` may return. For the full set, see the table in
-`man 3 getch`. As a general rule, to get a Key.something from corresponding
-KEY\_SOMETHING by dropping KEY\_ part and changing the rest to lower case. The
-only exception is KEY\_BREAK, with corresponding Key.codeBreak, to avoid using
-a keyword for an identifier.
+`man 3 getch`. As a general rule, you can get a Key.something from
+corresponding KEY\_SOMETHING by dropping KEY\_ part and changing the rest to
+lower case. The only exception is KEY\_BREAK, with corresponding Key.codeBreak,
+to avoid using a keyword as an identifier.
 
 ### enum Align
 - `left`
@@ -353,13 +353,13 @@ Available methods:
 
 ### struct Menu!T.Config
 Has following fields:
-- `int[] down` - when a key from these is pressed, next entry in the menu is
-  chosen.
-- `int[] up` - likewise, but the previous entry is chosen.
-- `int[] enter` - when a key from these is pressed, signal the chosen value to
-  the processing loop.
-- `Align alignment` - controls whether the menu is left-justified, centered or
-  right-justified.
+- `int[] down = ['j', Key.down]` - when a key from these is pressed, next entry
+  in the menu is chosen.
+- `int[] up = ['k', Key.up]` - likewise, but the previous entry is chosen.
+- `int[] enter = ['\n', '\r', Key.enter]` - when a key from these is pressed,
+  signal the chosen value to the processing loop.
+- `Align alignment = Align.center` - controls whether the menu is
+  left-justified, centered or right-justified.
 
 ### class Menu!T.Signal
 Has `sender` field inherited from UISignal and `T value` field which contains
@@ -381,9 +381,9 @@ configuration is pressed.
 
 ### struct Button.Config
 Has following fields:
-- `int[] enter` - when a key from these is pressed, signal it to the processing
-  loop.
-- `Align alignment` - controls the way button's text is aligned.
+- `int[] enter = ['\n', '\r', Key.enter]` - when a key from these is pressed,
+  signal it to the processing loop.
+- `Align alignment = Align.left` - controls the way button's text is aligned.
 
 ### class Button.Signal
 Has a single field `sender` inherited from UISignal.
@@ -401,8 +401,8 @@ The first one creates a label with dynamic text, the second one - with static.
 
 ### struct Label.Config
 Has following fields:
-- `int attribute` - attribute to use when drawing the text.
-- `Align alignment` - controls how the text is aligned.
+- `int attribute = Attr.normal` - attribute to use when drawing the text.
+- `Align alignment = Align.left` - controls how the text is aligned.
 
 ## class ProgressBar
 A class for progress bars. They are not selectable and can't signal anything to
@@ -416,31 +416,97 @@ The percentage of filledness of a progress bar can be queried and set via
 
 ### struct ProgressBar.Config
 Has following fields:
-- `char empty` - a character to use for drawing empty areas of the progress
-  bar.
-- `char filled` - a character to use for drawing filled areas of the progress
-  bar.
-- `int emptyAttr` - attribute to use for drawing empty areas.
-- `int filledAttr` -  attribute to use for drawing filled areas.
-- `bool vertical` - when set, the bar will be filled in vertical direction,
-  rather than in horizontal.
-- `bool reverse` - when set, the bar will be filled from the right to the left
-  for horizontal bars, and from the top to bottom for vertical ones.
+- `char empty = '-'` - a character to use for drawing empty areas of the
+  progress bar.
+- `char filled = '#'` - a character to use for drawing filled areas of the
+  progress bar.
+- `int emptyAttr = Attr.normal` - attribute to use for drawing empty areas.
+- `int filledAttr = Attr.normal` -  attribute to use for drawing filled areas.
+- `bool vertical = false` - when set, the bar will be filled in vertical
+  direction, rather than in horizontal.
+- `bool reverse = false` - when set, the bar will be filled from the right to
+  the left for horizontal bars, and from the top to bottom for vertical ones.
 
 ## class TextInput
 A class for text inputs. To start typing, a key in `start` field of input's
 configuration has to be pressed. When the user is done typing, the input will
 signal received text to the processing loop.
 
-Single constructor is available:
+A single constructor is available:
     this(UI ui, int nlines, int ncols, int y, int x, string initialText,
         Config cfg = Config());
+
 ### struct TextInput.Config
 Has following fields:
-- `int[] start` - when a key from these is pressed, start receiving text from
-  the user.
-- `string emptyText` - text to display when user typed in nothing.
+- `int[] start = ['\n', '\r', 'i', Key.enter]` - when a key from these is
+  pressed, start receiving text from the user.
+- `string emptyText = "<empty>"` - text to display when the user typed in
+  nothing.
 
 ### class TextInput.Signal
 Has `sender` field inherited from UISignal and `string text` field which 
 contains received from the user text.
+
+## class CheckBox
+A class for checkboxes. To change its status, press any key listed in
+`switchKeys` field of checkbox's configuration. When its status changes,
+signals new status to the processing loop. Current status is also available via
+`checked` field.
+
+Two constructors are available:
+    this(Ui ui, int nlines, int ncols, int y, int x,
+        string delegate() text, Config cfg = Config());
+    this(UI ui, int nlines, int ncols, int y, int x, string text,
+        Config cfg = Config());
+The first one creates a checkbox with dynamic text, the second one with static.
+
+### struct CheckBox.Config
+Has following fields:
+- `char whenChecked = '+'` - this will appear near text if the checkbox is
+  checked.
+- `char whenUnchecked = '-'` - this will appear near text if the checkbox is 
+  unchecked.
+- `int switchKeys = ['\n', '\r', Key.enter]` - keys that, when pressed, will
+  cause the checkbox to change its status.
+- `Align alignment = Align.left` - alignment of the text on the checkbox.
+
+### class CheckBox.Signal
+Has `sender` field inherited from UISignal and `bool checked` field which 
+indicates whether the checkbox is checked.
+    
+## class NumberBox
+A class for numerical input. You can change current value in two ways: press a
+key in any of `smallIncr`, `bigIncr`, `smallDecr` and `bigDecr` fields of 
+number box's configuration to (respectively) increase it by `smallStep`, 
+increase it by `bigStep`, decrease it by `smallStep`, decrease it by `bigStep`;
+or press any key in `start` field of number box's configuration to begin typing
+the number directly. In both cases, old value, new value and delta are signaled
+to the processing loop.
+
+A single constructor is available:
+    this(UI ui, int nlines, int ncols, int y, int x, int startingValue,
+        Config cfg = Config());
+
+### struct NumberBox.Config
+Has following fields:
+- `int[] start = ['\n', '\r', 'i', Key.enter]` - when any of these keys is 
+  pressed, text input mode is activated.
+- `int[] smallIncr = ['k', 'l', Key.up, Key.right]` - when any of these keys is
+  pressed, value increases by `smallStep`.
+- `int[] bigIncr = ['K', 'L", Key.sright]` - likewise, but increase the value
+  by `bigStep`.
+- `int[] smallDecr = ['j', 'h', Key.down, Key.left]` - likewise, but decrease
+  the value by `smallStep`.
+- `int[] bigDecr = ['J', 'H', Key.sleft]` - likewise, but decrease it by 
+  `bigStep`.
+- `int min = int.min` - the lower bound on the number box's value.
+- `int max = int.max` - the upper bound on the number box's value.
+- `int smallStep = 1`
+- `int bigStep = 5`
+- `Align alignment = Align.center` - alignment of the text on the number box.
+
+### class NumberBox.Signal
+Has `sender` field inherited from UISignal and also following fields:
+- `int value` - contains current value of the number box.
+- `int delta` - contains the change in the value.
+- `int old` - contains previous value of the number box.

@@ -15,12 +15,17 @@ void main()
     CheckBox.Config cb3cfg = { alignment: Align.right, };
     auto cb3 = new CheckBox(ui, 2, 14, 0, 40, "box #3", cb3cfg);
 
+    /* A number box. */
+    auto nb = new NumberBox(ui, 1, 20, 4, 0, 0);
+
     while (true) {
         ui.draw(true);
         int key = scr.getch();
         try {
             ui.keystroke(key);
         } catch (CheckBox.Signal s) {
+            {}
+        } catch (NumberBox.Signal s) {
             {}
         }
     }

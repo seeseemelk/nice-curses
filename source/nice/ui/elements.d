@@ -101,6 +101,7 @@ class Menu(T): UIElement
 
         override void draw(bool active)
         {
+            window.erase;
             auto headerAttr = active ? Attr.reverse : Attr.normal;
             int w = window.width;
             int h = window.height;
@@ -169,6 +170,7 @@ class Button: UIElement
 
         override void draw(bool active)
         {
+            window.erase;
             auto attr = active ? Attr.reverse : Attr.normal;
             window.addAligned(0, text(), cfg.alignment, attr);
         }
@@ -216,6 +218,7 @@ class Label: UIElement
 
         override void draw(bool active)
         {
+            window.erase;
             window.addAligned(0, text(), cfg.alignment, cfg.attribute);
         }
 }
@@ -256,6 +259,7 @@ class ProgressBar: UIElement
 
         override void draw(bool active)
         {
+            window.erase;
             if (cfg.vertical) {
                 int n = cast(int) (window.height * percentage);
                 if (cfg.reverse) {
@@ -302,8 +306,8 @@ class TextInput: UIElement
 {
     protected:
         string text;
-        Config cfg;
         int scroll;
+        Config cfg;
 
     public:
         /* Thrown when the user finishes typing. */
@@ -348,6 +352,7 @@ class TextInput: UIElement
 
         override void draw(bool active)
         {
+            window.erase;
             auto attr = active ? Attr.reverse : Attr.normal;
             if (text != "")
                 window.addstr(0, 0, text, attr);
@@ -434,6 +439,7 @@ class CheckBox: UIElement
         override void draw(bool active)
         {
             auto attr = active ? Attr.reverse : Attr.normal;
+            window.erase;
             char mark = checked ? cfg.whenChecked : cfg.whenUnchecked;
             final switch (cfg.alignment) {
                 case Align.left:
@@ -454,5 +460,102 @@ class CheckBox: UIElement
 
 class NumberBox: UIElement
 {
+    protected:
+        int value_;
+        Config cfg;
 
+    public:
+        int value() const @property { return value_; }
+        int value(int k) @property
+        {
+            int old = value_;
+            if (k > cfg.max) k = cfg.max;
+            if (k < cfg.min) k = cfg.min;
+            value_ = k;
+            return old;
+        }
+
+        /* Thrown when the user changes value - either through typing or
+           pressing an increment/decrement button. */
+        class Signal: UISignal
+        {
+            int value;
+            int delta;
+            int old;
+
+            this(int old)
+            {
+                super(this.outer);
+                this.old = old;
+                this.value = this.outer.value;
+                delta = value - old;
+            }
+        }
+
+        struct Config
+        {
+            int[] start = ['\n', '\r', 'i', Key.enter];
+            int[] smallIncr = ['k', 'l', Key.up, Key.right];
+            int[] bigIncr = ['K', 'L', Key.sright];
+            int[] smallDecr = ['j', 'h', Key.down, Key.left];
+            int[] bigDecr = ['J', 'H', Key.sleft];
+            int min = int.min;
+            int max = int.max;
+            int smallStep = 1;
+            int bigStep = 5;
+            Align alignment = Align.center;
+        }
+
+        this(UI ui, int nlines, int ncols, int y, int x, int startingValue,
+                Config cfg = Config())
+        {
+            super(ui, nlines, ncols, y, x);
+            value = startingValue;
+            this.cfg = cfg;
+        }
+
+        /* ---------- inherited stuff ---------- */
+
+        override bool keystroke(int key)
+        {
+            import std.algorithm;
+
+            int old = value;
+            if (cfg.start.canFind(key)) {
+                /* Read a number from the keyboard. */
+                import std.conv;
+                window.erase;
+                window.move(0, 0);
+                string str = window.getstr(ch => '0' <= ch && ch <= '9');
+                try {
+                    value = str.to!int;
+                } catch (ConvException e) {
+                    /* Can happen on an empty string. */
+                    value = cfg.min;
+                }
+                throw new Signal(old);
+            } else if (cfg.smallIncr.canFind(key)) {
+                /* Small step increment. */
+                throw new Signal(value = value + cfg.smallStep);
+            } else if (cfg.bigIncr.canFind(key)) {
+                /* Big step increment .*/
+                throw new Signal(value = value + cfg.bigStep);
+            } else if (cfg.smallDecr.canFind(key)) {
+                /* Small step decrement. */
+                throw new Signal(value = value - cfg.smallStep);
+            } else if (cfg.bigDecr.canFind(key)) {
+                /* Big step decrement. */
+                throw new Signal(value = value - cfg.bigStep);
+            }
+            return false;
+        } /* keystroke */
+
+        override void draw(bool active)
+        {
+            import std.conv;
+            window.erase;
+            auto attr = active ? Attr.reverse : Attr.normal;
+            window.addAligned(window.height / 2, value.to!string, cfg.alignment,
+                    attr);
+        }
 }
