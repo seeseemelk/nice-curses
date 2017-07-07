@@ -2,7 +2,7 @@ void main()
 {
     import std.format;
 
-    import nice.ui;
+    import nice.ui.elements;
 
     Curses.Config cfg = {
         disableEcho: true,
