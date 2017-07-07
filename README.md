@@ -59,6 +59,7 @@ Curses objects have following public fields:
 Curses object provides following methods:
 - `Window newWindow(int nlines, int ncols, int begin_y, int begin_x)` - create
   a new window.
+- `Window duplicateWindow(Window which)` - create an exact copy of a window.
 - `void deleteWindow(Window which)` - delete a window and all its subwindows.
 - `void setMode(Mode mode, int delayForHD = 1)` - enter one of the terminal
   modes (normal, cbreak, halfdelay and raw). Optional argument `delayForHD`

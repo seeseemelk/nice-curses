@@ -102,6 +102,14 @@ final class Curses
             return res;
         }
 
+        Window duplicateWindow(Window which)
+        {
+            auto p = dupwin(which.ptr);
+            Window res = new Window(colors, p, cfg.initKeypad);
+            windows ~= res;
+            return res;
+        }
+
         void deleteWindow(Window which) 
         {
             import std.algorithm;
