@@ -9,8 +9,11 @@ overload functions.
 'nice-curses' can also serve as an UI library, providing several basic UI
 elements and container for them.
 
-The library consists of two modules: `nice.curses`, which provides wrappers
-over ncurses library, and `nice.ui`, which provides the UI part of the library.
+The library consists of three modules: `nice.curses`, which provides wrappers
+over ncurses library, `nice.ui.base`, which provides the basis on which UIs are
+built, and `nice.ui.elements`, which provides some predefined UI element
+classes. `nice.ui.base` publicly imports `nice.curses` and `nice.ui.elements`
+publicly imports both `nice.curses` and `nice.ui.base`.
 
 # Initialization
 The library needs to be initialized prior to using it. Initialization is quite
