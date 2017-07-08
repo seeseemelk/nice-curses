@@ -281,7 +281,6 @@ final class Window
 
         ~this()
         {
-            destroy(children);
             keypad(false);
             delwin(ptr);
         }
