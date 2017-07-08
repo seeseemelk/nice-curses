@@ -8,6 +8,9 @@ targetType "library"
 
 configuration "full" { 
 }
+configuration "base-ui" {
+	excludedSourceFiles "source/nice/ui/elements.d"
+}
 configuration "minimal" { 
-	excludedSourceFiles "source/nice/ui.d"
+	excludedSourceFiles "source/nice/ui/base.d" "source/nice/ui/elements.d"
 }
