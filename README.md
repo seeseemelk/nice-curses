@@ -103,8 +103,8 @@ There are also several static properties:
 Objects of Window class have a single public field: `ColorTable colors`, which
 they inherit from the Curses object they were created with. There's no publicly
 available constructor for Window class. You have to create them either via
-`newWindow` method of the Curses class or via `subwin` and `derwin` methods of
-the Window class.
+`newWindow` or `duplicateWindow` methods of the Curses class or via `subwin`
+and `derwin` methods of the Window class.
 
 These are the methods for general manipulation of windows:
 - `void keypad(bool set)` - enter or leave keypad mode.
@@ -214,6 +214,7 @@ It can be indexed in two ways:
 - By a pair of `short`s: the first is foreground color index, the second is
   background.
 - By a single `short`: it is a color pair index.
+
 Indexing yields an attribute that can be used as a parameter to `addch`,
 `addstr` and the like. It may throw an exception if a requested pair is not in
 the table.
@@ -285,12 +286,14 @@ to avoid using a keyword as an identifier.
 - `center`
 - `right`
 
-# Usage as a UI library
+# Usage as an UI library
 When using 'nice-curses' as a UI library, you still need to initialize it as
 was shown before. In addition, you need to create an UI object. The constructor
 takes a Curses object, a Window object, and an optional UI.Config struct:
+
     UI.Config cfg = { /* Some configuration. */ };
     auto ui = new UI(curses, curses.stdscr, cfg);
+
 After that, you can construct some UI elements. All of the currently available
 UI element classes take UI object as the first argument in their constructors
 and there's no need to explicitly add them to the UI object via `addElement`
@@ -324,6 +327,7 @@ their constructors.
 Two constructors are available:
 - `this(Curses curses, Window window, Config cfg = Config())`
 - `this(Curses curses, Config cfg = Config())`
+
 The first one associates the UI with a given window, the second one uses
 stdscr.
 
@@ -386,7 +390,7 @@ Two constructors are available:
 ```
 The first one creates a button with dynamic text, the second one - with static.
 
-Buttons thrown a Button.Signal when a key that is in `enter` field of button's
+Buttons throw a Button.Signal when a key that is in `enter` field of button's
 configuration is pressed.
 
 ### struct Button.Config
