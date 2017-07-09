@@ -941,7 +941,7 @@ enum Attr
     vertical   = A_VERTICAL,
 }
 
-enum StdColor: chtype
+enum StdColor: short
 {
     black   = COLOR_BLACK,
     red     = COLOR_RED,
