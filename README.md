@@ -321,6 +321,12 @@ their constructors.
 - `void changeFocus(int by)` - change currently focused element.
 - `void changeFocus(UIElement newFocused)` - ditto.
 
+Two constructors are available:
+- `this(Curses curses, Window window, Config cfg = Config())`
+- `this(Curses curses, Config cfg = Config())`
+The first one associates the UI with a given window, the second one uses
+stdscr.
+
 ### struct UI.Config
 This struct controls how the UI reacts to certain keys. It has two fields,
 `int[] nextElemKeys` and `int[] prevElemKeys`. When a key that is in
@@ -334,10 +340,12 @@ the values that can serve as its entries. When a menu is active, its header is
 drawn in reverse mode.
 
 Two constructors are available:
+```
     this(UI ui, int nlines, int ncols, int y, int x, 
         string delegate() header, Config cfg = Config());
     this(UI ui, int nlines, int ncols, int y, int x, string header, 
         Config cfg = Config());
+```
 The first one creates a menu with a dynamic header, the second one - with a 
 static one.
 
@@ -370,10 +378,12 @@ A class for pressable buttons. When a button is active, it's drawn in reverse
 mode.
 
 Two constructors are available:
+```
     this(UI ui, int nlines, int ncols, int y, int x, 
         string delegate() text, Config cfg = Config());
     this(UI ui, int nlines, int ncols, int y, int x,
         string text, Config cfg = Config());
+```
 The first one creates a button with dynamic text, the second one - with static.
 
 Buttons thrown a Button.Signal when a key that is in `enter` field of button's
@@ -393,10 +403,12 @@ A class for text containers. Labels are not selectable and can't signal
 anything to the processing loop.
 
 Two constructors are available:
+```
     this(UI ui, int nlines, int ncols, int y, int x,
         string delegate() text, Config cfg = Config());
     this(UI ui, int nlines, int ncols, int y, int x,
         string text, Config cfg = Config());
+```
 The first one creates a label with dynamic text, the second one - with static.
 
 ### struct Label.Config
@@ -409,7 +421,9 @@ A class for progress bars. They are not selectable and can't signal anything to
 the processing loop.
 
 Single constructor is available:
+```
     this(UI ui, int nlines, int ncols, int y, int x, Config cfg = Config());
+```
 
 The percentage of filledness of a progress bar can be queried and set via
 `percentage` property (a double from [0, 1] range).
@@ -433,8 +447,10 @@ configuration has to be pressed. When the user is done typing, the input will
 signal received text to the processing loop.
 
 A single constructor is available:
+```
     this(UI ui, int nlines, int ncols, int y, int x, string initialText,
         Config cfg = Config());
+```
 
 ### struct TextInput.Config
 Has following fields:
@@ -454,10 +470,12 @@ signals new status to the processing loop. Current status is also available via
 `checked` field.
 
 Two constructors are available:
+```
     this(Ui ui, int nlines, int ncols, int y, int x,
         string delegate() text, Config cfg = Config());
     this(UI ui, int nlines, int ncols, int y, int x, string text,
         Config cfg = Config());
+```
 The first one creates a checkbox with dynamic text, the second one with static.
 
 ### struct CheckBox.Config
@@ -484,8 +502,10 @@ the number directly. In both cases, old value, new value and delta are signaled
 to the processing loop.
 
 A single constructor is available:
+```
     this(UI ui, int nlines, int ncols, int y, int x, int startingValue,
         Config cfg = Config());
+```
 
 ### struct NumberBox.Config
 Has following fields:
