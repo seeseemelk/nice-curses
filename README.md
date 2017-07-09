@@ -41,7 +41,7 @@ A Curses.Config struct has following fields:
 - `int cursLevel = 1` - set cursor visibility. 0 means invisible, 1 means
   normal and 2 means very visible.
 - `bool initKeypad = true` - set this to make all spawned windows to enter
-  keypad mode (this is most likely what you want, consult `man curs_set`).
+  keypad mode (this is most likely what you want, consult `man keypad`).
 - `bool nl = false` - when set, the program will enter `nl` mode, otherwise the
   program will enter `nonl` mode (consult ncurses docs for this).
 - `bool nodelay = false` - when set, the program will enter nodelay mode.
