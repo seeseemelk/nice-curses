@@ -919,7 +919,7 @@ struct RGB
     short r, g, b;
 }
 
-enum Attr
+enum Attr: chtype
 {
     normal     = A_NORMAL,
     charText   = A_CHARTEXT,

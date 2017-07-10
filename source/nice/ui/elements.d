@@ -194,7 +194,7 @@ class Label: UIElement
         struct Config
         {
             Align alignment = Align.left;
-            int attribute = Attr.normal;
+            chtype attribute = Attr.normal;
         }
 
         this(UI ui, int nlines, int ncols, int y, int x,
@@ -232,10 +232,10 @@ class ProgressBar: UIElement
     public:
         struct Config
         {
-            char empty = '-';
-            char filled = '#';
-            int emptyAttr = Attr.normal;
-            int filledAttr = Attr.normal;
+            chtype empty = '-';
+            chtype filled = '#';
+            chtype emptyAttr = Attr.normal;
+            chtype filledAttr = Attr.normal;
             bool vertical = false;
             bool reverse = false;
         }
@@ -385,8 +385,8 @@ class CheckBox: UIElement
 
         struct Config
         {
-            char whenChecked = '+';
-            char whenUnchecked = '-';
+            chtype whenChecked = '+';
+            chtype whenUnchecked = '-';
             int[] switchKeys = ['\n', '\r', Key.enter];
             /* Denotes the position of checked/unchecked mark. Note that the
                element should be at least 4 cells wide for left and right
@@ -440,7 +440,7 @@ class CheckBox: UIElement
         {
             auto attr = active ? Attr.reverse : Attr.normal;
             window.erase;
-            char mark = checked ? cfg.whenChecked : cfg.whenUnchecked;
+            chtype mark = checked ? cfg.whenChecked : cfg.whenUnchecked;
             final switch (cfg.alignment) {
                 case Align.left:
                     markWindow.addch(markWindow.height / 2, 1, mark);
