@@ -7,7 +7,7 @@
 module nice.curses;
 
 import deimos.ncurses;
-public import deimos.ncurses: chtype;
+public import deimos.ncurses: chtype, wint_t;
 
 package alias nc = deimos.ncurses; /* Just for convenience. */
 
@@ -51,7 +51,9 @@ final class Curses
         /* Initialize the library. */
         this(Config config = Config())
         {
+            import core.stdc.locale;
             cfg = config;
+            setlocale(LC_ALL, "");
 
             stdscr = new Window(null, initscr());
             if (config.useColors) {
@@ -357,62 +359,72 @@ final class Window
 
         /* ---------- drawing ---------- */
 
-        void addch(C: chtype, A: chtype)(int y, int x, C ch, A attr = Attr.normal)
+        void addch(C: wint_t, A: chtype)(C ch, A attr = Attr.normal)
         {
-            import std.format;
-
-            setAttr(attr);
-            /* addch fails when called on lower-right corner. Gotta compensate
-               for that. Ugh.
-               */
-            bool isLowerRight = (y == height - 1) && (x == width - 1);
-            if (nc.mvwaddch(ptr, y, x, ch) != OK && !isLowerRight)
-                throw new NCException("Failed to add character '%s' at %s:%s", ch, y, x);
+            bool isLowerRight = (curY == height - 1) && (curX == width - 1);
+            auto toDraw = prepChar(ch, attr);
+            if (nc.wadd_wch(ptr, &toDraw) != OK && !isLowerRight)
+                throw new NCException("Failed to add character '%s'", ch);
         }
 
-        void addch(C: chtype, A: chtype)(C ch, A attr = Attr.normal)
+        void addch(C: wint_t, A: chtype)(int y, int x, C ch, A attr = Attr.normal)
         {
-            import std.format;
-            setAttr(attr);
-            bool isLowerRight = (curY == height - 1) && (curX == width - 1);
-            if (nc.waddch(ptr, ch) != OK && !isLowerRight)
-                throw new NCException("Failed to add character '%s'", ch);
+            bool isLowerRight = (y == height - 1) && (x == width - 1);
+            auto toDraw = prepChar(ch, attr);
+            if (nc.mvwadd_wch(ptr, y, x, &toDraw) != OK && !isLowerRight)
+                throw new NCException("Failed to add character '%s' at %s:%s", ch, y, x);
         }
 
         void addnstr(A: chtype)(int y, int x, string str, int n, A attr = Attr.normal)
         {
-            import std.string;
-
-            setAttr(attr);
-            if (nc.mvwaddnstr(ptr, y, x, str.toStringz, n) != OK)
+            try {
+                move(y, x);
+                addnstr(str, n, attr);
+            } catch (NCException e) {
                 throw new NCException("Failed to write string '%s' at %s:%s", str, y, x);
-        }
+            }
+        } 
 
-        void addnstr(A: chtype)(int n, string str, int n, A attr = Attr.normal)
+        void addnstr(A: chtype)(string str, int n, A attr = Attr.normal)
         {
-            import std.string;
+            /* Ugh. add_wchstr and friends don't do quite a number of neat 
+               things that plain addstr does. No wrapping, no newline checks,
+               no cursor advancement. Why? This library is a mess. Now I have
+               to reimplement those goodies myself just because I want Unicode.
+               Grr.
+               */
+            import std.uni;
 
-            setAttr(attr);
-            if (nc.waddnstr(ptr, str.toStringz, n) != OK)
-                throw new NCException("Failed to write string '%s' at %s:%s", str, y, x);
-        }
+            int w = width;
+            int h = height;
+            int y = curY;
+            int x = curX;
+            foreach (gr; str.byGrapheme) {
+                import std.algorithm;
+                import std.array;
+                import std.conv;
+                if (y >= h || n <= 0) break;
+
+                int step = 1;
+                auto chars = gr[].array.to!(wint_t[]);
+                if (chars.canFind('\t')) step = 8;
+                foreach (ch; chars) {
+                    move(y, x);
+                    addch(ch, attr);
+                }
+                advance(y, x, w, h, step);
+                n -= step;
+            }
+        } /* addnstr */
 
         void addstr(A: chtype)(int y, int x, string str, A attr = Attr.normal)
         {
-            import std.string;
-
-            setAttr(attr);
-            if (nc.mvwaddstr(ptr, y, x, str.toStringz) != OK)
-                throw new NCException("Failed to write string '%s' at %s:%s", str, y, x);
+            addnstr(y, x, str, width * height, attr);
         }
 
         void addstr(A: chtype)(string str, A attr = Attr.normal)
         {
-            import std.string;
-
-            setAttr(attr);
-            if (nc.waddstr(ptr, str.toStringz) != OK)
-                throw new NCException("Failed to write string '%s'", str);
+            addnstr(str, width * height, attr);
         }
 
         /* This will silently drop any characters that don't fit into the 
@@ -432,11 +444,14 @@ final class Window
                 Align alignment, A attr = Attr.normal)
         {
             import std.algorithm;
+            import std.range.primitives;
+            import std.uni;
+            int delegate(string) len = x => cast(int) (x.byGrapheme.walkLength);
 
             final switch (alignment) {
                 case Align.left: 
                     while (y < height && str != "") {
-                        int w = min(width - x, cast(int) str.length);
+                        int w = min(width - x, len(str));
                         addnstr(y, x, str, w, attr);
                         y++;
                         str = str[w .. $];
@@ -444,7 +459,7 @@ final class Window
                     break;
                 case Align.center: 
                     while (y < height && str != "") {
-                        int w = min(2 * x, 2 * (width - x), cast(int) str.length);
+                        int w = min(2 * x, 2 * (width - x), len(str));
                         addnstr(y, x - w / 2, str, w, attr);
                         y++;
                         str = str[w .. $];
@@ -452,7 +467,7 @@ final class Window
                     break;
                 case Align.right: 
                     while (y < height && str != "") {
-                        int w = min(x, cast(int) str.length);
+                        int w = min(x, len(str));
                         addnstr(y, x - w, str, w, attr);
                         y++;
                         str = str[w .. $];
@@ -907,16 +922,46 @@ final class ColorTable
 /* An exception that is thrown on ncurses errors. */
 class NCException: Exception 
 {
-    import std.format;
     this(Arg...)(string formatString, Arg args)
     {
+        import std.format;
         super(format(formatString, args));
     }
 }
 
+/* ---------- helpers and enums ---------- */
+
 struct RGB
 {
     short r, g, b;
+}
+
+struct WChar
+{
+    private:
+        bool isSpecialKey_;
+        int key_;
+        wint_t chr_;
+
+    public:
+        bool isSpecialKey() const @property { return isSpecialKey_; }
+        int key() const @property { return key_; }
+        wint_t chr() const @property { return chr_; }
+
+    package:
+        @disable this();
+
+        this(int key)
+        {
+            key_ = cast(Key) key;
+            isSpecialKey_ = true;
+        }
+
+        this(wint_t chr)
+        {
+            chr_ = chr;
+            isSpecialKey_ = false;
+        }
 }
 
 enum Attr: chtype
@@ -1121,4 +1166,31 @@ enum Align
     left,
     center,
     right
+}
+
+/* ---------- private helpers ---------- */
+
+private:
+
+/* Prepare a wide character for drawing. */
+cchar_t
+prepChar(C: wint_t, A: chtype)(C ch, A attr)
+{
+    import core.stdc.stddef: wchar_t;
+
+    cchar_t res;
+    wchar_t[] str = [ch, 0];
+    setcchar(&res, &str[0], attr, 0, null);
+    return res;
+}
+
+/* Advance the cursor by a given amount of spaces. */
+void 
+advance(ref int y, ref int x, int w, int h, int by)
+{
+    x += by;
+    while(x >= w) {
+        x -= w;
+        y++;
+    }
 }

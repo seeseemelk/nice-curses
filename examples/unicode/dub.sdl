@@ -1,0 +1,6 @@
+name "unicode"
+description "An example showcasing unicode handling."
+authors "Michail Pevnev"
+copyright "Copyright © 2017, michail"
+license "Boost"
+dependency "nice-curses" path="../../"

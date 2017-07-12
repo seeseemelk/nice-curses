@@ -35,7 +35,7 @@ void main()
     auto borderButton = new Button(ui, 1, 20, 1, 1, "Draw a border", buttonCfg);
 
     /* A text input. */
-    auto textInput = new TextInput(ui, 1, 30, 2, 1, "Press Enter or 'i' to input text");
+    auto textInput = new TextInput(ui, 1, 50, 2, 1, "Press Enter or 'i' to input text");
 
     /* Main processing loop. */
     while (true) {
@@ -46,7 +46,7 @@ void main()
             ui.keystroke(k);
         } catch (Menu!Fruit.Signal s) {
             auto fruit = s.value; /* Chosen value is stored in '.value' */
-            string msg = format!"Your fruit is %s. Press any key to continue."(fruit);
+            string msg = format("Your fruit is %s. Press any key to continue.", fruit);
             scr.addAligned(scr.height / 2, scr.width / 2, msg, Align.center);
             scr.refresh;
             curses.update;
