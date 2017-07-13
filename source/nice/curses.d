@@ -485,9 +485,23 @@ final class Window
             nc.wborder(ptr, left, right, top, bottom, topLeft, topRight, bottomLeft, bottomRight);
         }
 
-        void box(chtype vertical, chtype horizontal)
+        void border(cchar_t left, cchar_t right, cchar_t top, cchar_t bottom,
+                cchar_t topLeft, cchar_t topRight, 
+                cchar_t bottomLeft, cchar_t bottomRight)
         {
-            nc.box(ptr, vertical, horizontal);
+            nc.wborder_set(ptr, 
+                    &left, &right, &top, &bottom, 
+                    &topLeft, &topRight, &bottomLeft, &bottomRight);
+        }
+
+        void box(cchar_t vertical, cchar_t horizontal)
+        {
+            nc.box_set(ptr, &vertical, &horizontal);
+        }
+
+        void box(chtype v, chtype h)
+        {
+            nc.box(ptr, v, h);
         }
 
         void delch(int y, int x)
@@ -512,12 +526,12 @@ final class Window
                 throw new NCException("Failed to insert a character at position %s:%s", y, x);
         }
 
-        /* This is unfortunate, but none of 'insstr' family functions accept
-           immutable strings, the result of toStringz. 
-           */
         void insert(string s)
         {
             import std.string;
+            /* This is unfortunate, but none of 'insstr' family functions
+               accept immutable strings, the result of toStringz. 
+               */
             nc.winsstr(ptr, cast(char*) s.toStringz);
         }
 
@@ -551,9 +565,24 @@ final class Window
                 throw new NCException("Failed to draw a horizontal line at %s:%s", y, x);
         }
 
+        void hline(int y, int x, cchar_t ch, int n)
+        {
+            try {
+                move(y, x);
+                hline(ch, n);
+            } catch (NCException e) {
+                throw new NCException("Failed to draw a horizontal line at %s:%s", y, x);
+            }
+        }
+
         void hline(chtype ch, int n)
         {
             nc.whline(ptr, ch, n);
+        }
+
+        void hline(cchar_t ch, int n)
+        {
+            nc.whline_set(ptr, &ch, n);
         }
 
         /* Overlays this window on top of another (non-destructively). */
@@ -582,9 +611,24 @@ final class Window
                 throw new NCException("Failed to draw a vertical line at %s:%s", y, x);
         }
 
+        void vline(int y, int x, cchar_t ch, int n)
+        {
+            try {
+                move(y, x);
+                vline(ch, n);
+            } catch (NCException e) {
+                throw new NCException("Failed to draw a vertical line at %s:%s", y, x);
+            }
+        }
+
         void vline(chtype ch, int n)
         {
             nc.wvline(ptr, ch, n);
+        }
+
+        void vline(cchar_t ch, int n)
+        {
+            nc.wvline_set(ptr, &ch, n);
         }
 
         /* ---------- various manipulations ---------- */
@@ -647,8 +691,23 @@ final class Window
         {
             int res = wgetch(ptr);
             if (res == ERR)
-                throw new Exception("Failed to get a character");
+                throw new NCException("Failed to get a character");
             return res;
+        }
+
+        /* This should be preferred over plain 'getch' if you care about your
+           program being Unicode-aware. 
+           */
+        WChar getwch()
+        {
+            wint_t chr;
+            int res = wget_wch(ptr, &chr);
+            if (res == KEY_CODE_YES)
+                return WChar(chr, true);
+            else if (res == OK)
+                return WChar(chr, false);
+            else
+                throw new NCException("Failed to get a wide character");
         }
 
         int curX() @property
@@ -673,27 +732,31 @@ final class Window
 
         string getstr(int maxLength, bool echoChars = true)
         {
-            import std.string;
+            import std.conv;
 
             bool isEcho = Curses.echoMode;
             Curses.echo(echoChars);
             scope(exit) Curses.echo(isEcho);
 
-            char[] buffer = new char[maxLength + 1];
-            char* p = &buffer[0];
-            if (wgetstr(ptr, p) != OK)
-                throw new Exception("Failed to get a string");
-            return fromStringz(p).idup;
+            wint_t[] buffer = new wint_t[maxLength + 1];
+            buffer[$ - 1] = 0;
+            if (wgetn_wstr(ptr, &buffer[0], maxLength) != OK)
+                throw new NCException("Failed to get a string");
+            string res;
+            res.reserve(buffer.length);
+            foreach (ch; buffer)
+                res ~= text(ch);
+            return res;
         }
 
         string getstr(bool echoChars = true)
         {
-            return getstr(ch => ch <= 0xff, echoChars);
+            return getstr(ch => true, echoChars);
         }
 
-        string getstr(bool delegate(int) predicate, bool echoChars = true)
+        string getstr(bool delegate(wint_t) predicate, bool echoChars = true)
         {
-            import std.string;
+            import std.conv;
 
             bool isEcho = Curses.echoMode;
             Curses.echo(false);
@@ -703,13 +766,34 @@ final class Window
             int x = curX;
             int y = curY;
             while(true) {
-                int ch = wgetch(ptr);
-                if (ch == ERR) return res;
-                if (ch == '\n' || ch == '\r' || ch == Key.enter) return res;
-                if (ch == '\b' || ch == Key.left || ch == Key.backspace
-                        || ch == killchar || ch == erasechar) {
+                WChar key;
+                try {
+                    key = getwch;
+                } catch (NCException e) {
+                    return res;
+                }
+                bool special = key.isSpecialKey;
+                wint_t ch = key.chr;
+                /* Check for end-of-input keys. */
+                if ((special && key.key == Key.enter) 
+                        || ch == '\n' || ch == '\r') 
+                    return res;
+                /* Check for erase-some-characters keys. */
+                wint_t kill, erase;
+                nc.killwchar(&kill);
+                nc.erasewchar(&erase);
+                if (special && (key.key == Key.left || key.key == Key.backspace)
+                        || ch == '\b' || ch == kill || ch == erase) {
                     if (res.length == 0) continue;
-                    res = res[0 .. $ - 1];
+                    import std.array;
+                    import std.range;
+                    import std.uni;
+                    res = res
+                        .byGrapheme
+                        .array
+                        .dropBackOne
+                        .byCodePoint
+                        .text;
                     /* Delete the character under the cursor and then move it. */
                     if (!echoChars) continue;
                     x--;
@@ -721,8 +805,10 @@ final class Window
                     delch(y, x);
                     continue;
                 }
-                /* Only allow deleting characters and finishing the input if
-                   at the end of the window. */
+                if (special) continue;
+                /* When at the end of the window, allow only deleting and
+                   finishing the input. 
+                   */
                 if (x == width - 1 && y == height - 1) continue;
                 if (!predicate(ch)) {
                     nc.beep();
@@ -733,7 +819,7 @@ final class Window
                 if (echoChars) addch(ch);
                 x = curX;
                 y = curY;
-                res ~= cast(char) ch;
+                res ~= text(ch);
             } /* while true */
         } /* getstr */
 
@@ -918,11 +1004,7 @@ class NCException: Exception
 
 /* ---------- helpers and enums ---------- */
 
-struct RGB
-{
-    short r, g, b;
-}
-
+/* Wide character - the return type of getwch function. */
 struct WChar
 {
     private:
@@ -936,19 +1018,49 @@ struct WChar
         wint_t chr() const @property { return chr_; }
 
     package:
-        @disable this();
-
-        this(int key)
+        this(wint_t key, bool isSpecial)
         {
-            key_ = cast(Key) key;
-            isSpecialKey_ = true;
+            if (isSpecial) {
+                key_ = key;
+                isSpecialKey_ = true;
+            } else {
+                chr_ = key;
+                isSpecialKey_ = false;
+            }
         }
+}
 
-        this(wint_t chr)
-        {
-            chr_ = chr;
-            isSpecialKey_ = false;
-        }
+/* Complex character (that is, with attribute bundled) - used as input by some
+   functions.
+   */
+struct CChar
+{
+    wint_t[] chars;
+    chtype attr;
+
+    this(wint_t chr, chtype attr = Attr.normal)
+    {
+        chars = [chr];
+        this.attr = attr;
+    }
+
+    this(const wint_t[] chars, chtype attr = Attr.normal)
+    {
+        this.chars = chars.dup;
+        this.attr = attr;
+    }
+
+    alias cchar this;
+
+    cchar_t cchar() const @property
+    {
+        return prepChar(chars, attr);
+    }
+}
+
+struct RGB
+{
+    short r, g, b;
 }
 
 enum Attr: chtype
@@ -989,7 +1101,8 @@ enum Key
 {
     codeYes   = KEY_CODE_YES,
     min       = KEY_MIN,
-    codeBreak = KEY_BREAK, /* This should've been break, but that's a keyword. */
+    codeBreak = KEY_BREAK, /* This should've been just 'break', but that's a
+                              keyword. */
 
     down      = KEY_DOWN,
     up        = KEY_UP,
@@ -1168,6 +1281,23 @@ prepChar(C: wint_t, A: chtype)(C ch, A attr)
     cchar_t res;
     wchar_t[] str = [ch, 0];
     setcchar(&res, &str[0], attr, 0, null);
+    return res;
+}
+
+cchar_t
+prepChar(C: wint_t, A: chtype)(const C[] chars, A attr)
+{
+    import core.stdc.stddef: wchar_t;
+    import std.exception;
+    enforce(chars.length < CCHARW_MAX, "The array of characters must be shorter " ~
+          "than CCHARW_MAX");
+
+    cchar_t res;
+    const wchar_t[] str = chars ~ 0;
+    /* Hmm, 'const' modifiers apparently were lost during porting the library
+       from C to D.
+       */
+    setcchar(&res, cast(wchar_t*) &str[0], attr, 0, null);
     return res;
 }
 
