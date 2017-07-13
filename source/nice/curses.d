@@ -369,10 +369,12 @@ final class Window
 
         void addch(C: wint_t, A: chtype)(int y, int x, C ch, A attr = Attr.normal)
         {
-            bool isLowerRight = (y == height - 1) && (x == width - 1);
-            auto toDraw = prepChar(ch, attr);
-            if (nc.mvwadd_wch(ptr, y, x, &toDraw) != OK && !isLowerRight)
+            try {
+                move(y, x);
+                addch(ch, attr);
+            } catch (NCException e) {
                 throw new NCException("Failed to add character '%s' at %s:%s", ch, y, x);
+            }
         }
 
         void addnstr(A: chtype)(int y, int x, string str, int n, A attr = Attr.normal)
@@ -387,35 +389,20 @@ final class Window
 
         void addnstr(A: chtype)(string str, int n, A attr = Attr.normal)
         {
-            /* Ugh. add_wchstr and friends don't do quite a number of neat 
-               things that plain addstr does. No wrapping, no newline checks,
-               no cursor advancement. Why? This library is a mess. Now I have
-               to reimplement those goodies myself just because I want Unicode.
-               Grr.
-               */
+            import core.stdc.stddef;
+            import std.array;
+            import std.conv;
             import std.uni;
 
-            int w = width;
-            int h = height;
-            int y = curY;
-            int x = curX;
-            foreach (gr; str.byGrapheme) {
-                import std.algorithm;
-                import std.array;
-                import std.conv;
-                if (y >= h || n <= 0) break;
-
-                int step = 1;
-                auto chars = gr[].array.to!(wint_t[]);
-                if (chars.canFind('\t')) step = 8;
-                foreach (ch; chars) {
-                    move(y, x);
-                    addch(ch, attr);
-                }
-                advance(y, x, w, h, step);
-                n -= step;
-            }
-        } /* addnstr */
+            setAttr(attr);
+            wchar_t[] chars = [];
+            chars.reserve(str.length);
+            foreach (gr; str.byGrapheme)
+                chars ~= gr[].array.to!(wchar_t[]);
+            chars ~= 0;
+            if (waddwstr(ptr, &chars[0]) != OK)
+                throw new NCException("Failed to add string '%s'", str);
+        } 
 
         void addstr(A: chtype)(int y, int x, string str, A attr = Attr.normal)
         {
