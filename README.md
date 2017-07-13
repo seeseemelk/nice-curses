@@ -136,10 +136,12 @@ These are the methods for child windows management:
 For difference between `subwin` and `derwin` consult your ncurses documentation.
 
 These are the drawing primitives. Those that take coordinates all throw a
-NCException if the requested position is outside the window.
-- `void addch(C: chtype, A: chtype)(int y, int x, C ch, A attr = Attr.normal)`
+NCException if the requested position is outside the window. For those
+functions that take `cchar_t` arguments, consider constructing them via `CChar`
+struct (see CChar section on details).
+- `void addch(C: wint_t, A: chtype)(int y, int x, C ch, A attr = Attr.normal)`
   Draws a single character at the given position with given attribute.
-- `void addch(C: chtype, A: chtype)(C ch, A attr = Attr.normal)` Draws a single
+- `void addch(C: wint_t, A: chtype)(C ch, A attr = Attr.normal)` Draws a single
   character at the current cursor position with given attribute.
 - `void addstr(A: chtype)(int y, int x, string str, A attr = Attr.normal)`
   Draws a string at the given position with given attribute.
@@ -162,8 +164,15 @@ that doesn't fit into the window will be silently discarded.
 - `void addAligned(A: chtype)(int y, string str, Align alignment, A attr =
   Attr.normal)` Same as the previous, but uses the whole window's width and
 figures out x coordinate from the alignment parameter.
-- `void border(...)` - see 'man 3 border'.
-- `void box(chtype vertical, chtype horizontal)` - see 'man 3 box'.
+- `void border(chtype left, chtype right, chtype top, chtype bottom,
+        chtype topLeft, chtype topRight, chtype bottomLeft, chtype bottomRight)`
+  Draws a border around window edges.
+- `void border(cchar_t left, cchar_t right, cchar_t top, cchar_t bottom,
+        cchar_t topLeft, cchar_t topRight, cchar_t bottomLeft, cchar_t bottomRight)`
+  Draws a border around window edges using wide characters.
+- `void box(chtype vertical, chtype horizontal)` - draws a box around window
+  edges.
+- `void box(cchar_t vertical, cchar_t horizontal)` - ditto.
 - `void delch(int y, int x)` - delete a character at the given position.
 - `void delch()` - delete a character under the cursor.
 - `void insert(int y, int x, chtype ch)` - insert a character at the given
@@ -176,9 +185,17 @@ figures out x coordinate from the alignment parameter.
   characters at the given position.
 - `void hline(chtype ch, int n)` - draw a horizontal line of `n` characters at
   the current cursor position.
+- `void hline(int y, int x, cchar_t ch, int n)` - draw a horizontal line of `n`
+  characters at the given position.
+- `void hline(cchar_t ch, int n)` - draw a horizontal line of `n` characters at
+  the current cursor position.
 - `void vline(int y, int x, chtype ch, int n)` - draw a vertical line of `n`
   characters at the given position.
 - `void vline(chtype ch, int n)` - draw a vertical line of `n` characters at
+  the current cursor position.
+- `void vline(int y, int x, cchar_t ch, int n)` - draw a vertical line of `n`
+  characters at the given position.
+- `void vline(cchar_t ch, int n)` - draw a vertical line of `n` characters at
   the current cursor position.
 - `void overlay(Window target)` - overlay this window on top of another. Blanks
   are not copied.
@@ -186,7 +203,8 @@ figures out x coordinate from the alignment parameter.
   Blanks are copied.
 
 These are for retrieving information from the window.
-- `int getch()` - get a single keystroke.
+- `int getch()` - get a single narrow key from the keyboard.
+- `WChar getwch()` - get a single wide character from the keyboard.
 - `int curX()` - get the X coordinate of the cursor.
 - `int curY()` - get the Y coordinate of the cursor.
 - `int width()` - get the width of the window.
@@ -196,9 +214,9 @@ These are for retrieving information from the window.
   being typed.
 - `string getstr(bool echoChars = true)` - get a string of characters. May or
   may not echo the characters being typed. 
-- `string getstr(bool delegate(int) predicate, bool echoChars = true)` - get a
-  string of characters, blocking all keys such that the given predicate returns
-  false on them. May or may not echo the characters being typed. 
+- `string getstr(bool delegate(wint_t) predicate, bool echoChars = true)` - get
+  a string of characters, blocking all keys such that the given predicate
+  returns false on them. May or may not echo the characters being typed. 
 - `chtype[] inchstr()` - get an array of characters and attributes from the 
   cursor to the right margin of the window.
 - `chtype[] inchstr(int n)` - same, but limit the maximum amount of the 
@@ -235,11 +253,26 @@ Apart of this, a ColorTable object has following methods:
 
 ## Helper things
 
-### struct RGB
-Used to represent colors. Has three fields:
-- `short r` - the red component.
-- `short g` - the green component.
-- `short b` - the blue component.
+### struct WChar
+The return type of the `getwch()` method. Has following (read-only) properties:
+- `bool isSpecialKey` - indicates whether the WChar contains a result of 
+  pressing a function key.
+- `int key` - if `isSpecialKey` is `true`, contains the pressed key. Undefined
+  otherwise.
+- `wint_t chr` - if `isSpecialKey` is `false`, contains the typed character.
+  Undefined otherwise.
+
+### struct CChar
+A struct representing a wide character with attributes. Uses `alias this`, so
+it can be used whereever a `cchar_t` is expected.
+
+Two constructors are available:
+```
+this(wint_t chr, chtype attr = Attr.normal)
+this(const wint_t[] chars, chtype attr = Attr.normal)
+```
+The first one constructs a CChar from a single wide character, the second one -
+from a string of wide characters.
 
 ### enum Attr
 A set of possible (and binary OR-able) attributes for drawing characters. 
@@ -273,6 +306,12 @@ A set of default colors:
 - `magenta`
 - `cyan`
 - `white`
+
+### struct RGB
+Used to represent colors. Has three fields:
+- `short r` - the red component.
+- `short g` - the green component.
+- `short b` - the blue component.
 
 ### enum Key
 A set of constants that `getch` may return. For the full set, see the table in
@@ -434,12 +473,13 @@ The percentage of filledness of a progress bar can be queried and set via
 
 ### struct ProgressBar.Config
 Has following fields:
-- `char empty = '-'` - a character to use for drawing empty areas of the
+- `wint_t empty = '-'` - a character to use for drawing empty areas of the
   progress bar.
-- `char filled = '#'` - a character to use for drawing filled areas of the
+- `wint_t filled = '#'` - a character to use for drawing filled areas of the
   progress bar.
-- `int emptyAttr = Attr.normal` - attribute to use for drawing empty areas.
-- `int filledAttr = Attr.normal` -  attribute to use for drawing filled areas.
+- `chtype emptyAttr = Attr.normal` - attribute to use for drawing empty areas.
+- `chtype filledAttr = Attr.normal` -  attribute to use for drawing filled
+  areas.
 - `bool vertical = false` - when set, the bar will be filled in vertical
   direction, rather than in horizontal.
 - `bool reverse = false` - when set, the bar will be filled from the right to
@@ -484,9 +524,9 @@ The first one creates a checkbox with dynamic text, the second one with static.
 
 ### struct CheckBox.Config
 Has following fields:
-- `char whenChecked = '+'` - this will appear near text if the checkbox is
+- `wint_t whenChecked = '+'` - this will appear near text if the checkbox is
   checked.
-- `char whenUnchecked = '-'` - this will appear near text if the checkbox is 
+- `wint_t whenUnchecked = '-'` - this will appear near text if the checkbox is 
   unchecked.
 - `int switchKeys = ['\n', '\r', Key.enter]` - keys that, when pressed, will
   cause the checkbox to change its status.
