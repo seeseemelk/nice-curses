@@ -18,10 +18,10 @@ void main()
        */
     auto ui = new UI(curses, scr); 
 
-    auto menu = new Menu!Fruit(ui, 20, 20, 10, scr.width / 2 - 10,
-            "Pick a fruit" /* We're using static text */
-            ); /* and default config. With it arrows and Vim keys are accepted
-                  for movement. */
+    Menu!Fruit.Config menucfg = { alignment: Align.center, };
+    auto menu = new Menu!Fruit(ui, 20, 8, 10, scr.width / 2 - 10,
+            "Pick a fruit", /* We're using static text */
+            menucfg); 
     /* We're using static text for these three. Could use an arbitrary 
        delegate if we wanted to. */
     menu.addEntry(Fruit.apple, "Apple");
@@ -40,7 +40,7 @@ void main()
     /* Main processing loop. */
     while (true) {
         ui.draw();
-        int k = scr.getch();
+        WChar k = scr.getwch();
 
         try {
             ui.keystroke(k);

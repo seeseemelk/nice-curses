@@ -11,6 +11,8 @@ module nice.ui.elements;
 public import nice.curses;
 public import nice.ui.base;
 
+private alias W = WChar; /* There's a lot of default keys below. */
+
 class Menu(T): UIElement
 {
     protected:
@@ -24,9 +26,9 @@ class Menu(T): UIElement
     public:
         struct Config
         {
-            int[] down = ['j', Key.down];
-            int[] up = ['k', Key.up];
-            int[] enter = ['\n', '\r', Key.enter];
+            WChar[] down = [W('j'), W(Key.down)];
+            WChar[] up = [W('k'), W(Key.up)];
+            WChar[] enter = [W('\n'), W('\r'), W(Key.enter)];
             Align alignment = Align.center;
         }
 
@@ -106,7 +108,7 @@ class Menu(T): UIElement
             int w = window.width;
             int h = window.height;
             window.addAligned(0, header(), cfg.alignment, headerAttr);
-            int offset = 3;
+            int offset = 5;
             for (int i = 0; i < h - offset; i++) {
                 int entry = i + curScroll;
                 if (entry >= entries.length) break;
@@ -115,7 +117,7 @@ class Menu(T): UIElement
             }
         }
 
-        override bool keystroke(int key) 
+        override bool keystroke(WChar key) 
         {
             import std.algorithm;
             if (cfg.down.canFind(key)) {
@@ -147,7 +149,7 @@ class Button: UIElement
         struct Config
         {
             Align alignment = Align.left;
-            int[] enter = ['\n', '\r', Key.enter];
+            WChar[] enter = [W('\n'), W('\r'), W(Key.enter)];
         }
 
         this(UI ui, int nlines, int ncols, int y, int x, 
@@ -175,7 +177,7 @@ class Button: UIElement
             window.addAligned(0, text(), cfg.alignment, attr);
         }
 
-        override bool keystroke(int key)
+        override bool keystroke(WChar key)
         {
             import std.algorithm;
             if (cfg.enter.canFind(key))
@@ -234,8 +236,8 @@ class ProgressBar: UIElement
         {
             wint_t empty = '-';
             wint_t filled = '#';
-            wint_t emptyAttr = Attr.normal;
-            wint_t filledAttr = Attr.normal;
+            chtype emptyAttr = Attr.normal;
+            chtype filledAttr = Attr.normal;
             bool vertical = false;
             bool reverse = false;
         }
@@ -324,7 +326,7 @@ class TextInput: UIElement
 
         struct Config
         {
-            int[] start = ['\n', '\r', 'i', Key.enter];
+            WChar[] start = [W('\n'), W('\r'), W('i'), W(Key.enter)];
             string emptyText = "<empty>";
         }
 
@@ -338,16 +340,15 @@ class TextInput: UIElement
 
         /* ---------- inherited stuff ---------- */
 
-        override bool keystroke(int key)
+        override bool keystroke(WChar key)
         {
             import std.algorithm;
             if (!cfg.start.canFind(key)) return false;
 
             window.erase;
             window.move(0, 0);
-            string str = window.getstr;
-            text = str;
-            throw new Signal(str);
+            text = window.getstr;
+            throw new Signal(text);
         } 
 
         override void draw(bool active)
@@ -387,7 +388,7 @@ class CheckBox: UIElement
         {
             wint_t whenChecked = '+';
             wint_t whenUnchecked = '-';
-            int[] switchKeys = ['\n', '\r', Key.enter];
+            WChar[] switchKeys = [W('\n'), W('\r'), W(Key.enter)];
             /* Denotes the position of checked/unchecked mark. Note that the
                element should be at least 4 cells wide for left and right
                alignments and at least 2 cells high for central alignment. */
@@ -426,7 +427,7 @@ class CheckBox: UIElement
 
         /* ---------- inherited stuff ---------- */
 
-        override bool keystroke(int key)
+        override bool keystroke(W key)
         {
             import std.algorithm;
             if (cfg.switchKeys.canFind(key)) {
@@ -494,11 +495,11 @@ class NumberBox: UIElement
 
         struct Config
         {
-            int[] start = ['\n', '\r', 'i', Key.enter];
-            int[] smallIncr = ['k', 'l', Key.up, Key.right];
-            int[] bigIncr = ['K', 'L', Key.sright];
-            int[] smallDecr = ['j', 'h', Key.down, Key.left];
-            int[] bigDecr = ['J', 'H', Key.sleft];
+            WChar[] start = [W('\n'), W('\r'), W('i'), W(Key.enter)];
+            WChar[] smallIncr = [W('k'), W('l'), W(Key.up), W(Key.right)];
+            WChar[] bigIncr = [W('K'), W('L'), W(Key.sright)];
+            WChar[] smallDecr = [W('j'), W('h'), W(Key.down), W(Key.left)];
+            WChar[] bigDecr = [W('J'), W('H'), W(Key.sleft)];
             int min = int.min;
             int max = int.max;
             int smallStep = 1;
@@ -516,7 +517,7 @@ class NumberBox: UIElement
 
         /* ---------- inherited stuff ---------- */
 
-        override bool keystroke(int key)
+        override bool keystroke(WChar key)
         {
             import std.algorithm;
 

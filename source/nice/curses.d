@@ -6,6 +6,8 @@
 
 module nice.curses;
 
+import std.uni;
+
 import deimos.ncurses;
 public import deimos.ncurses: chtype, wint_t;
 
@@ -359,12 +361,32 @@ final class Window
 
         /* ---------- drawing ---------- */
 
+        void addch(C: cchar_t)(C ch)
+        {
+            bool isLowerRight = (curY == height - 1) && (curX == width - 1);
+            cchar_t cchar = ch;
+            if (nc.wadd_wch(ptr, &cchar) != OK && !isLowerRight)
+                throw new NCException("Failed to add complex character '%s'", ch);
+
+        }
+
         void addch(C: wint_t, A: chtype)(C ch, A attr = Attr.normal)
         {
             bool isLowerRight = (curY == height - 1) && (curX == width - 1);
             auto toDraw = prepChar(ch, attr);
             if (nc.wadd_wch(ptr, &toDraw) != OK && !isLowerRight)
                 throw new NCException("Failed to add character '%s'", ch);
+        }
+
+        void addch(C: cchar_t)(int y, int x, C ch)
+        {
+            try {
+                move(y, x);
+                addch(ch);
+            } catch (NCException e) {
+                throw new NCException("Failed to add complex character '%s' at %s%s", 
+                        ch, y, x);
+            }
         }
 
         void addch(C: wint_t, A: chtype)(int y, int x, C ch, A attr = Attr.normal)
@@ -431,35 +453,46 @@ final class Window
                 Align alignment, A attr = Attr.normal)
         {
             import std.algorithm;
-            import std.range.primitives;
+            import std.range;
+            import std.string;
             import std.uni;
-            int delegate(string) len = x => cast(int) (x.byGrapheme.walkLength);
 
-            final switch (alignment) {
-                case Align.left: 
-                    while (y < height && str != "") {
-                        int w = min(width - x, len(str));
-                        addnstr(y, x, str, w, attr);
-                        y++;
-                        str = str[w .. $];
+            /* Advance to the next line. */
+            void nextLine(Range)(Range grs)
+            {
+                final switch (alignment) {
+                    case Align.left: 
+                        move(y, x);
+                        break;
+                    case Align.center:
+                        int offset = min(grs.walkLength / 2 - 1, x);
+                        move(y, x - offset);
+                        break;
+                    case Align.right:
+                        int offset = min(x, grs.walkLength - 1);
+                        move(y, x - offset);
+                        break;
+                }
+            }
+            foreach (line; str.splitLines) {
+                auto grs = line.byGrapheme;
+                nextLine(grs);
+                while (!grs.empty) {
+                    auto gr = grs.front;
+                    grs.popFront;
+                    try {
+                        addch(fromGrapheme(gr, attr));
+                    } catch (NCException e) {
+                        return;
                     }
-                    break;
-                case Align.center: 
-                    while (y < height && str != "") {
-                        int w = min(2 * x, 2 * (width - x), len(str));
-                        addnstr(y, x - w / 2, str, w, attr);
-                        y++;
-                        str = str[w .. $];
-                    }
-                    break;
-                case Align.right: 
-                    while (y < height && str != "") {
-                        int w = min(x, len(str));
-                        addnstr(y, x - w, str, w, attr);
-                        y++;
-                        str = str[w .. $];
-                    }
-            } /* switch alignment */
+                    if (curY >= height) return;
+                    if (curY > y) {
+                        y = curY;
+                        nextLine(grs);
+                    } /* if next line */
+                } /* while !grs.empty */
+                y++;
+            } /* foreach line */
         } /* addAligned */
 
         /* Use the whole window and figure out exact X coordinate. */
@@ -776,8 +809,9 @@ final class Window
                 wint_t ch = key.chr;
                 /* Check for end-of-input keys. */
                 if ((special && key.key == Key.enter) 
-                        || ch == '\n' || ch == '\r') 
+                        || ch == '\n' || ch == '\r') {
                     return res;
+                }
                 /* Check for erase-some-characters keys. */
                 wint_t kill, erase;
                 nc.killwchar(&kill);
@@ -1017,16 +1051,28 @@ struct WChar
         int key() const @property { return key_; }
         wint_t chr() const @property { return chr_; }
 
-    package:
-        this(wint_t key, bool isSpecial)
+        bool opBinary(op)(WChar other)
+            if (op == "==")
         {
-            if (isSpecial) {
+            if (isSpecialKey_ != other.isSpecialKey_) return false;
+            if (isSpecialKey_)
+                return key_ == other.key_;
+            else
+                return chr_ == other.chr_;
+        }
+
+        this(wint_t key, bool isSpecial = false)
+        {
+            isSpecialKey_ = isSpecial;
+            if (isSpecial) 
                 key_ = key;
-                isSpecialKey_ = true;
-            } else {
+            else
                 chr_ = key;
-                isSpecialKey_ = false;
-            }
+        }
+
+        this(Key key)
+        {
+            this(key, true);
         }
 }
 
@@ -1048,6 +1094,12 @@ struct CChar
     {
         this.chars = chars.dup;
         this.attr = attr;
+    }
+
+    bool opBinary(op)(wint_t chr)
+        if (op == "==")
+    {
+        return chars[0] == chr;
     }
 
     alias cchar this;
@@ -1310,4 +1362,29 @@ advance(ref int y, ref int x, int w, int h, int by)
         x -= w;
         y++;
     }
+}
+
+CChar
+fromGrapheme(Grapheme g, chtype attr = Attr.normal)
+{
+    import std.array;
+
+    return CChar(g[].array, attr);
+}
+
+/* Returns visual lenght of a string. */
+int 
+lineLength(string str)
+{
+    import std.array;
+    import std.uni;
+
+    int res = 0;
+    foreach (gr; str.byGrapheme) {
+        if (gr[0] == '\t') 
+            res += 8;
+        else 
+            res++;
+    }
+    return res;
 }

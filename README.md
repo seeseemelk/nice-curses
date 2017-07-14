@@ -334,22 +334,26 @@ takes a Curses object, a Window object, and an optional UI.Config struct:
     auto ui = new UI(curses, curses.stdscr, cfg);
 
 After that, you can construct some UI elements. All of the currently available
-UI element classes take UI object as the first argument in their constructors
-and there's no need to explicitly add them to the UI object via `addElement`
+UI element classes take UI object as the first argument of their constructors
+so there's no need to explicitly add them to the UI object via `addElement`
 method.
 
 Assuming you use the usual processing loop approach, you need then to read 
-keyboard input with `getch` and feed it to the UI via its 
-`void keystroke(int key)` method. Note that this method may raise an exception
-to deliver UI elements' reaction to the key to the main loop. Those exceptions
-all inhering from UISignal class, and have `sender` field which contains the
-element that reacted to the keypress.
+keyboard input with `getwch` and feed it to the UI via its 
+`void keystroke(WChar key)` method. Note that this method may raise an
+exception to deliver UI elements' reaction to the key to the main loop. Those
+exceptions all inherit from UISignal class, and have `sender` field which
+contains the element that reacted to the keystroke.
+
+Note that while whenever a list of `WChar`s is given below, the conversion from
+plain `char` or `Key` via `WChar`s constructor is omitted to avoid unnecessary
+clutter.
 
 Below will be given the list of currently available pre-made UIElement classes.
 
 ## class UI
 An UI object has following publicly available methods:
-- `void keystroke(int key)` - process a keystroke from the user. This can
+- `void keystroke(WChar key)` - process a keystroke from the user. This can
   change currently focused element and raise an exception inheriting from
 UISignal class.
 - `void draw(bool erase = true)` - draw the UI, optionally erasing the window
@@ -372,7 +376,7 @@ stdscr.
 
 ### struct UI.Config
 This struct controls how the UI reacts to certain keys. It has two fields,
-`int[] nextElemKeys` and `int[] prevElemKeys`. When a key that is in
+`WChar[] nextElemKeys` and `WChar[] prevElemKeys`. When a key that is in
 `nextElemKeys` is sent to the UI via `keystroke`, the focus will change to the
 next focusable visible element. Likewise, if a key that is in `prevElemKeys` is
 sent, previous focusable visible element will be selected.
@@ -404,10 +408,10 @@ Available methods:
 
 ### struct Menu!T.Config
 Has following fields:
-- `int[] down = ['j', Key.down]` - when a key from these is pressed, next entry
-  in the menu is chosen.
-- `int[] up = ['k', Key.up]` - likewise, but the previous entry is chosen.
-- `int[] enter = ['\n', '\r', Key.enter]` - when a key from these is pressed,
+- `WChar[] down = ['j', Key.down]` - when a key from these is pressed, next
+  entry in the menu is chosen.
+- `WChar[] up = ['k', Key.up]` - likewise, but the previous entry is chosen.
+- `WChar[] enter = ['\n', '\r', Key.enter]` - when a key from these is pressed,
   signal the chosen value to the processing loop.
 - `Align alignment = Align.center` - controls whether the menu is
   left-justified, centered or right-justified.
@@ -434,7 +438,7 @@ configuration is pressed.
 
 ### struct Button.Config
 Has following fields:
-- `int[] enter = ['\n', '\r', Key.enter]` - when a key from these is pressed,
+- `WChar[] enter = ['\n', '\r', Key.enter]` - when a key from these is pressed,
   signal it to the processing loop.
 - `Align alignment = Align.left` - controls the way button's text is aligned.
 
@@ -456,14 +460,14 @@ The first one creates a label with dynamic text, the second one - with static.
 
 ### struct Label.Config
 Has following fields:
-- `int attribute = Attr.normal` - attribute to use when drawing the text.
+- `chtype attribute = Attr.normal` - attribute to use when drawing the text.
 - `Align alignment = Align.left` - controls how the text is aligned.
 
 ## class ProgressBar
 A class for progress bars. They are not selectable and can't signal anything to
 the processing loop.
 
-Single constructor is available:
+A single constructor is available:
 ```
     this(UI ui, int nlines, int ncols, int y, int x, Config cfg = Config());
 ```
@@ -498,7 +502,7 @@ A single constructor is available:
 
 ### struct TextInput.Config
 Has following fields:
-- `int[] start = ['\n', '\r', 'i', Key.enter]` - when a key from these is
+- `WChar[] start = ['\n', '\r', 'i', Key.enter]` - when a key from these is
   pressed, start receiving text from the user.
 - `string emptyText = "<empty>"` - text to display when the user typed in
   nothing.
@@ -528,8 +532,8 @@ Has following fields:
   checked.
 - `wint_t whenUnchecked = '-'` - this will appear near text if the checkbox is 
   unchecked.
-- `int switchKeys = ['\n', '\r', Key.enter]` - keys that, when pressed, will
-  cause the checkbox to change its status.
+- `WChar[] switchKeys = ['\n', '\r', Key.enter]` - keys that, when pressed,
+  will cause the checkbox to change its status.
 - `Align alignment = Align.left` - alignment of the text on the checkbox.
 
 ### class CheckBox.Signal
@@ -553,15 +557,15 @@ A single constructor is available:
 
 ### struct NumberBox.Config
 Has following fields:
-- `int[] start = ['\n', '\r', 'i', Key.enter]` - when any of these keys is 
+- `WChar[] start = ['\n', '\r', 'i', Key.enter]` - when any of these keys is 
   pressed, text input mode is activated.
-- `int[] smallIncr = ['k', 'l', Key.up, Key.right]` - when any of these keys is
-  pressed, value increases by `smallStep`.
-- `int[] bigIncr = ['K', 'L", Key.sright]` - likewise, but increase the value
+- `WChar[] smallIncr = ['k', 'l', Key.up, Key.right]` - when any of these keys
+  is pressed, value increases by `smallStep`.
+- `WChar[] bigIncr = ['K', 'L", Key.sright]` - likewise, but increase the value
   by `bigStep`.
-- `int[] smallDecr = ['j', 'h', Key.down, Key.left]` - likewise, but decrease
+- `WChar[] smallDecr = ['j', 'h', Key.down, Key.left]` - likewise, but decrease
   the value by `smallStep`.
-- `int[] bigDecr = ['J', 'H', Key.sleft]` - likewise, but decrease it by 
+- `WChar[] bigDecr = ['J', 'H', Key.sleft]` - likewise, but decrease it by 
   `bigStep`.
 - `int min = int.min` - the lower bound on the number box's value.
 - `int max = int.max` - the upper bound on the number box's value.

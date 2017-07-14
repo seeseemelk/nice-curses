@@ -24,8 +24,8 @@ class UI
     public:
         struct Config
         {
-            int[] nextElemKeys = ['\t', '+', Key.npage];
-            int[] prevElemKeys = ['\b', '-', Key.ppage];
+            WChar[] nextElemKeys = [WChar('\t'), WChar('+'), WChar(Key.npage)];
+            WChar[] prevElemKeys = [WChar('\b'), WChar('-'), WChar(Key.ppage)];
         }
 
         /* ---------- creation ---------- */
@@ -49,7 +49,7 @@ class UI
 
         /* Processes a keystroke. Returns true if keystroke was processed by 
            the UI or an element. */
-        bool keystroke(int key)
+        bool keystroke(WChar key)
         {
             import std.algorithm;
 
@@ -72,8 +72,7 @@ class UI
         {
             if (erase) window.erase;
             foreach (i, elem; elements)
-                if (elem.visible)
-                    drawElement(elem, i == focus);
+                if (elem.visible) drawElement(elem, i == focus);
             window.refresh;
             curses.update;
         }
@@ -153,7 +152,7 @@ abstract class UIElement
         void focus() { /* No-op by default. */ }
         void unfocus() { /* Also no-op. */ }
         /* Should return true if a keypress has been processed. */
-        bool keystroke(int key) { return false; }
+        bool keystroke(WChar key) { return false; }
 }
 
 /* This is used to communicate UI events from elements to the processing loop. */
