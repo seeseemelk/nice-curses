@@ -397,7 +397,8 @@ The first one creates a menu with a dynamic header, the second one - with a
 static one.
 
 Menus throw a Menu!T.Signal when a key that is in `enter` field of menu's
-configuration is pressed.
+configuration is pressed and when (but only if `signalChange` in config is
+true) the chosen entry is changed.
 
 Available methods:
 - `T chosenValue()` - return currenly chosen value. 
@@ -415,6 +416,8 @@ Has following fields:
   signal the chosen value to the processing loop.
 - `Align alignment = Align.center` - controls whether the menu is
   left-justified, centered or right-justified.
+- `bool signalChange = false` - controls whether the menu will throw a `Signal`
+  when the chosen entry changes.
 
 ### class Menu!T.Signal
 Has `sender` field inherited from UISignal and `T value` field which contains

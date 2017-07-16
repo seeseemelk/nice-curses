@@ -22,6 +22,7 @@ class Menu(T): UIElement
         string delegate()[] entries;
         T[] values;
         Config cfg;
+        bool signalChange;
 
     public:
         struct Config
@@ -30,9 +31,11 @@ class Menu(T): UIElement
             WChar[] up = [W('k'), W(Key.up)];
             WChar[] enter = [W('\n'), W('\r'), W(Key.enter)];
             Align alignment = Align.center;
+            bool signalChange = false;
         }
 
-        /* Thrown when 'Enter' is pressed while in the menu. */
+        /* Thrown when 'Enter' is pressed while in the menu or when the chosen
+           element changes (if signalChange is set). */
         class Signal: UISignal
         {
             T value;
@@ -122,9 +125,13 @@ class Menu(T): UIElement
             import std.algorithm;
             if (cfg.down.canFind(key)) {
                 choose(+1);
+                if (cfg.signalChange)
+                    throw new Signal();
                 return true;
             } else if (cfg.up.canFind(key)) {
                 choose(-1);
+                if (cfg.signalChange)
+                    throw new Signal();
                 return true;
             } else if (cfg.enter.canFind(key)) {
                 throw new Signal();
