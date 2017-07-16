@@ -98,6 +98,7 @@ class UI
         /* Changes currently active element by shifting focus by a given amount. */
         void changeFocus(int by)
         {
+            if (elements == []) return;
             int oldFocus = focus;
             elements[focus].unfocus();
             int direction = by > 0 ? +1 : -1;
