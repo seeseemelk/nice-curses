@@ -1096,6 +1096,14 @@ struct CChar
         this.attr = attr;
     }
 
+    this(const string chars, chtype attr = Attr.normal)
+    {
+        import std.conv;
+
+        this.chars = chars.to!(wint_t[]);
+        this.attr = attr;
+    }
+
     bool opBinary(op)(wint_t chr)
         if (op == "==")
     {

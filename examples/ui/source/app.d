@@ -19,7 +19,7 @@ void main()
     auto ui = new UI(curses, scr); 
 
     Menu!Fruit.Config menucfg = { alignment: Align.center, };
-    auto menu = new Menu!Fruit(ui, 20, 8, 10, scr.width / 2 - 10,
+    auto menu = new Menu!Fruit(ui, 20, 20, 10, scr.width / 2 - 10,
             "Pick a fruit", /* We're using static text */
             menucfg); 
     /* We're using static text for these three. Could use an arbitrary 
