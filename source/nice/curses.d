@@ -1348,12 +1348,11 @@ cchar_t
 prepChar(C: wint_t, A: chtype)(const C[] chars, A attr)
 {
     import core.stdc.stddef: wchar_t;
-    import std.exception;
-    enforce(chars.length < CCHARW_MAX, "The array of characters must be shorter " ~
-          "than CCHARW_MAX");
+    import std.array;
+    import std.range;
 
     cchar_t res;
-    const wchar_t[] str = chars ~ 0;
+    const wchar_t[] str = (chars.take(CCHARW_MAX).array) ~ 0;
     /* Hmm, 'const' modifiers apparently were lost during porting the library
        from C to D.
        */
