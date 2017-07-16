@@ -61,7 +61,8 @@ class UI
                 changeFocus(-1);
                 res = true;
             } else {
-                res = elements[focus].keystroke(key);
+                if (elements != [])
+                    res = elements[focus].keystroke(key);
             }
             draw(true);
             return res;
