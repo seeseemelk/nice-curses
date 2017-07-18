@@ -399,6 +399,39 @@ final class Window
             }
         }
 
+        void addnstr(A: chtype)(int y, int x, string str, int n, A[] attrs)
+        {
+            try {
+                move(y, x);
+                addnstr(str, n, attrs);
+            } catch (NCException e) {
+                throw new NCException("Failed to write string '%s' at %s:%s", str, y, x);
+            }
+        }
+
+        void addnstr(A: chtype)(string str, int n, A[] attrs)
+        {
+            import std.array;
+            import std.range;
+            import std.uni;
+            auto grs = str.byGrapheme;
+            if (grs.walkLength != attrs.length)
+                throw new NCException("Unable to write the string '%s' at %s:%s " ~
+                       "when the attribute array doesn't have the same length", 
+                       str, y, x);
+            foreach (i, gr; str.byGrapheme) {
+                if (n <= 0) break;
+                string chr = gr[].array;
+                auto c = CChar(chr, attrs[i]);
+                try {
+                    addch(c);
+                } catch (NCException e) {
+                    break;
+                }
+                n--;
+            }
+        }
+
         void addnstr(A: chtype)(int y, int x, string str, int n, A attr = Attr.normal)
         {
             try {
@@ -425,6 +458,16 @@ final class Window
             if (waddwstr(ptr, &chars[0]) != OK)
                 throw new NCException("Failed to add string '%s'", str);
         } 
+
+        void addstr(A: chtype)(int y, int x, string str, A[] attrs);
+        {
+            addnstr(y, x, str, width * height, attrs);
+        }
+
+        void addstr(A: chtype)(string str, A[] attrs)
+        {
+            addnstr(str, width * height, attrs);
+        }
 
         void addstr(A: chtype)(int y, int x, string str, A attr = Attr.normal)
         {
