@@ -20,7 +20,7 @@ void main()
 
     while (true) {
         ui.draw(true);
-        int key = scr.getch();
+        WChar key = scr.getwch();
         try {
             ui.keystroke(key);
         } catch (CheckBox.Signal s) {
