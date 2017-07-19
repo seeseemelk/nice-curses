@@ -361,6 +361,12 @@ final class Window
 
         /* ---------- drawing ---------- */
 
+        import std.range;
+        import std.traits;
+
+        enum isString(T) = isInputRange!T && is(Unqual!(ElementType!T): dchar);
+        enum isAttrRange(T) = isInputRange!T && is(Unqual!(ElementType!T): chtype);
+
         void addch(C: cchar_t)(C ch)
         {
             bool isLowerRight = (curY == height - 1) && (curX == width - 1);
@@ -399,7 +405,9 @@ final class Window
             }
         }
 
-        void addnstr(A: chtype)(int y, int x, string str, int n, A[] attrs)
+        /* Coords, n, multiple attrs */
+        void addnstr(String, Range) (int y, int x, String str, int n, Range attrs)
+            if (isString!String && isAttrRange!Range)
         {
             try {
                 move(y, x);
@@ -409,30 +417,37 @@ final class Window
             }
         }
 
-        void addnstr(A: chtype)(string str, int n, A[] attrs)
+        /* n, multiple attrs */
+        void addnstr(String, Range)(String str, int n, Range attrs)
+            if (isString!String && isAttrRange!Range)
         {
             import std.array;
+            import std.conv;
             import std.range;
             import std.uni;
             auto grs = str.byGrapheme;
-            if (grs.walkLength != attrs.length)
-                throw new NCException("Unable to write the string '%s' at %s:%s " ~
-                       "when the attribute array doesn't have the same length", 
-                       str, y, x);
-            foreach (i, gr; str.byGrapheme) {
+            size_t i = 0;
+            foreach (gr; str.byGrapheme) {
                 if (n <= 0) break;
-                string chr = gr[].array;
-                auto c = CChar(chr, attrs[i]);
+                if (attrs.empty) break;
+                string chr = text(gr[].array);
+                auto attr = attrs.front;
+                attrs.popFront;
+                auto c = CChar(chr, attr);
                 try {
                     addch(c);
                 } catch (NCException e) {
                     break;
                 }
                 n--;
+                i++;
             }
         }
 
-        void addnstr(A: chtype)(int y, int x, string str, int n, A attr = Attr.normal)
+        /* Coords, n, single attr */
+        void addnstr(String, A: chtype)
+            (int y, int x, String str, int n, A attr = Attr.normal)
+            if (isString!String)
         {
             try {
                 move(y, x);
@@ -442,16 +457,19 @@ final class Window
             }
         } 
 
-        void addnstr(A: chtype)(string str, int n, A attr = Attr.normal)
+        /* n, single attr */
+        void addnstr(String, A: chtype)(String str, int n, A attr = Attr.normal)
+            if (isString!String)
         {
             import core.stdc.stddef;
             import std.array;
             import std.conv;
+            import std.range;
             import std.uni;
 
             setAttr(attr);
             wchar_t[] chars = [];
-            chars.reserve(str.length);
+            chars.reserve(str.walkLength);
             foreach (gr; str.byGrapheme)
                 chars ~= gr[].array.to!(wchar_t[]);
             chars ~= 0;
@@ -459,22 +477,30 @@ final class Window
                 throw new NCException("Failed to add string '%s'", str);
         } 
 
-        void addstr(A: chtype)(int y, int x, string str, A[] attrs);
+        /* Coords, multiple attrs */
+        void addstr(String, Range)(int y, int x, String str, Range attrs)
+            if (isString!String && isAttrRange!Range)
         {
             addnstr(y, x, str, width * height, attrs);
         }
 
-        void addstr(A: chtype)(string str, A[] attrs)
+        /* Multiple attrs */
+        void addstr(String, Range)(String str, Range attrs)
+            if (isString!String && isAttrRange!Range)
         {
             addnstr(str, width * height, attrs);
         }
 
-        void addstr(A: chtype)(int y, int x, string str, A attr = Attr.normal)
+        /* Coords, single attr */
+        void addstr(String, A: chtype)(int y, int x, String str, A attr = Attr.normal)
+            if (isString!String)
         {
             addnstr(y, x, str, width * height, attr);
         }
 
-        void addstr(A: chtype)(string str, A attr = Attr.normal)
+        /* Single attr */
+        void addstr(String, A: chtype)(String str, A attr = Attr.normal)
+            if (isString!String)
         {
             addnstr(str, width * height, attr);
         }
@@ -492,8 +518,9 @@ final class Window
 
            Note that this method uses the entire window.
          */
-        void addAligned(A: chtype)(int y, int x, string str, 
-                Align alignment, A attr = Attr.normal)
+        void addAligned(String, Range)(int y, int x, String str, 
+                Align alignment, Range attrs)
+            if (isString!String && isAttrRange!Range)
         {
             import std.algorithm;
             import std.range;
@@ -517,12 +544,19 @@ final class Window
                         break;
                 }
             }
-            foreach (line; str.splitLines) {
+            /* The 'take' is here for infinite ranges. Not sure why would
+               anyone want to feed an infinite range to this method, but hey.
+               It's nice to have the possibility.
+               */
+            auto arr = str.take(width * height).array;
+            foreach (line; arr.splitLines) {
                 auto grs = line.byGrapheme;
                 nextLine(grs);
-                while (!grs.empty) {
+                while (!grs.empty && !attrs.empty) {
                     auto gr = grs.front;
+                    auto attr = attrs.front;
                     grs.popFront;
+                    attrs.popFront;
                     try {
                         addch(fromGrapheme(gr, attr));
                     } catch (NCException e) {
@@ -538,20 +572,38 @@ final class Window
             } /* foreach line */
         } /* addAligned */
 
+        void addAligned(String, A: chtype)(int y, int x, String str, 
+                Align alignment, A attr = Attr.normal)
+            if (isString!String)
+        {
+            import std.range;
+            addAligned(y, x, str, alignment, cycle([attr]));
+        }
+
         /* Use the whole window and figure out exact X coordinate. */
-        void addAligned(A: chtype)(int y, string str, Align alignment, A attr = Attr.normal)
+        void addAligned(String, Range) (int y, String str, Align alignment, Range attrs)
+            if (isString!String && isAttrRange!Range)
         {
             final switch(alignment) {
                 case Align.left:
-                    addAligned(y, 0, str, alignment, attr);
+                    addAligned(y, 0, str, alignment, attrs);
                     break;
                 case Align.center:
-                    addAligned(y, width / 2, str, alignment, attr);
+                    addAligned(y, width / 2, str, alignment, attrs);
                     break;
                 case Align.right:
-                    addAligned(y, width - 1, str, alignment, attr);
+                    addAligned(y, width - 1, str, alignment, attrs);
                     break;
             }
+        }
+
+        /* Ditto, but with single attribute. */
+        void addAligned(String, A: chtype) (int y, String str, Align alignment, A attr)
+            if (isString!String)
+        {
+            import std.range;
+
+            addAligned(y, str, alignment, cycle([attr]));
         }
 
         void border(chtype left, chtype right, chtype top, chtype bottom,
@@ -608,20 +660,20 @@ final class Window
             /* This is unfortunate, but none of 'insstr' family functions
                accept immutable strings, the result of toStringz. 
                */
-            nc.winsstr(ptr, cast(char*) s.toStringz);
+            nc.winsstr(ptr, cast(char*) &(s.toStringz[0]));
         }
 
         void insert(int y, int x, string s)
         {
             import std.string;
-            if (nc.mvwinsstr(ptr, y, x, cast(char*) s.toStringz) != OK)
+            if (nc.mvwinsstr(ptr, y, x, cast(char*) &(s.toStringz[0])) != OK)
                 throw new NCException("Failed to insert a string at position %s:%s", y, x);
         }
 
         void insert(string s, int n)
         {
             import std.string;
-            nc.winsnstr(ptr, cast(char*) s.toStringz, n);
+            nc.winsnstr(ptr, cast(char*) &(s.toStringz[0]), n);
         }
 
         void insert(int y, int x, string s, int n)
@@ -630,7 +682,7 @@ final class Window
             /* This fails to compile if template parameters list is omitted.
                Dunno why.
                */
-            if (nc.mvwinsnstr!(WINDOW, int, char)(ptr, y, x, cast(char*) s.toStringz, n) 
+            if (nc.mvwinsnstr!(WINDOW, int, char)(ptr, y, x, cast(char*) &(s.toStringz[0]), n) 
                     != OK)
                 throw new NCException("Failed to insert a string at position %s:%s", y, x);
         }

@@ -1,0 +1,6 @@
+name "addstr"
+description "A test for add[n]str family of functions."
+authors "michail"
+copyright "Copyright © 2017, michail"
+license "Boost"
+dependency "nice-curses" path="../../"

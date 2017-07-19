@@ -138,32 +138,53 @@ For difference between `subwin` and `derwin` consult your ncurses documentation.
 These are the drawing primitives. Those that take coordinates all throw a
 NCException if the requested position is outside the window. For those
 functions that take `cchar_t` arguments, consider constructing them via `CChar`
-struct (see CChar section on details).
+struct (see CChar section on details). Wherever a String template parameter is
+used, it means an input range with element type implicitly castable to `dchar`.
+Wherever a Range template parameter is mentioned, it means an input range with
+element type implicitly castable to `chtype`.
+
 - `void addch(C: wint_t, A: chtype)(int y, int x, C ch, A attr = Attr.normal)`
   Draws a single character at the given position with given attribute.
 - `void addch(C: wint_t, A: chtype)(C ch, A attr = Attr.normal)` Draws a single
   character at the current cursor position with given attribute.
-- `void addstr(A: chtype)(int y, int x, string str, A attr = Attr.normal)`
-  Draws a string at the given position with given attribute.
-- `void addstr(A: chtype)(string str, A attr = Attr.normal)` Draws a string at
-  the current cursor position with given attribute.
-- `void addnstr(A: chtype)(int y, int x, string str, int n, A attr =
-  Attr.normal)` Draws at most `n` characters from the string at the given
-position with given attribute.
-- `void addnstr(A: chtype)(string str, int n, A attr = Attr.normal)` Draws at
-  most `n` characters from the string at the current cursor position with given
-attribute.
-- `void addAligned(A: chtype)(int y, int x, string str, Align alignment, A attr
-  = Attr.normal)` The behaviour depends on the `alignment` parameter. If it's
-`Align.left` then y and x are the coordinates of the text's upper-left corner,
-and the text will be left-justified. If it's `Align.center` then y and x are
-the coordinates of the first line's center, and the text will be centered
-around this point. If it's `Align.right`, then y and x are the coordinates of
-the text's upper-right corner, and the text will be right-justified. The text
-that doesn't fit into the window will be silently discarded.
-- `void addAligned(A: chtype)(int y, string str, Align alignment, A attr =
-  Attr.normal)` Same as the previous, but uses the whole window's width and
-figures out x coordinate from the alignment parameter.
+- `void addnstr(String, Range)(int y, int x, String str, int n, Range attrs)`
+  Draws a string at the given position, but no more than `n` characters. Each
+  character gets an attribute from `attrs` range (`str` and `attrs` are 
+  iterated over in lockstep). Drawing stops when any of the following
+  conditions occur: `str` is exausted, `attrs` is exausted, `n` characters were
+  drawn, window's lower right corner was reached.
+- `void addnstr(String, Range)(String str, int n, Range attrs)`
+  Same as before, but uses current cursor coordinates.
+- `void addnstr(String, A: chtype)(int y, int x, String str, int n, A attr = Attr.normal)`
+  Same as the first one, but uses the same attribute for the entire string.
+- `void addnstr(String, A: chtype)(String str, int n, A attr = Attr.normal)`
+  Same as the previous one, but uses current cursor coordinates.
+- `void addstr(String, Range)(int y, int x, String str, Range attrs)`
+  Same as the first `addnstr`, but doesn't impose a restriction on the number
+  of written characters.
+- `void addstr(String, Range)(String str, Range attrs)`
+  Same as the previous one, but uses current cursor's coordinates.
+- `void addstr(String, A: chtype)(int y, int x, String str, A attr = Attr.normal)`
+  Same as the first `addstr`, but uses the same attribute for the entire
+  string.
+- `void addstr(String, A: chtype)(String str, A attr = Attr.normal)`
+  Same as the previous one, but uses current cursor's cooridnates.
+- `void addAligned(String, Range)(int y, int x, String str, Align alignment, Range attrs`
+  The behaviour depends on the `alignment` parameter. If it's `Align.left` then
+  y and x are the coordinates of the text's upper-left corner, and the text
+  will be left-justified. If it's `Align.center` then y and x are the
+  coordinates of the first line's center, and the text will be centered around
+  this point. If it's `Align.right`, then y and x are the coordinates of the
+  text's upper-right corner, and the text will be right-justified. The text
+  that doesn't fit into the window will be silently discarded.
+- `void addAligned(String, A: chtype)
+      (int y, int x, String str, Align alignment, A attr = Attr.normal)`
+  Same as before, but uses the same attribute for the entire string.
+- `void addAligned(String, Range)(int y, String str, Align alignment, Range attrs)`
+  Same as the first one, but uses the whole window's width and figures out x
+  coordinate from the `alignment` parameter.
+- `void addAligned(String, A: chtype)(int y, String str, Align alignment, A attr)`
+  Same as the previous one, but uses the same attribute for the entire string.
 - `void border(chtype left, chtype right, chtype top, chtype bottom,
         chtype topLeft, chtype topRight, chtype bottomLeft, chtype bottomRight)`
   Draws a border around window edges.
