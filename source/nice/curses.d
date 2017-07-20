@@ -60,7 +60,7 @@ final class Curses
             stdscr = new Window(null, initscr());
             if (config.useColors) {
                 import std.exception;
-                enforce(has_colors());
+                enforce(has_colors(), "Terminal does not support colors");
                 start_color();
                 colors = new ColorTable(config.useStdColors);
                 stdscr.colors = colors;
@@ -995,7 +995,6 @@ final class ColorTable
         struct Pair { short fg; short bg; }
 
         Pair[short] pairs; /* A mapping from pair indices to pairs. */
-        chtype[Pair] attrs; /* A mapping from pairs to attributes. */
         short[] reusablePairs;
         short latestPair = 1;
 
@@ -1019,18 +1018,16 @@ final class ColorTable
         chtype opIndex(short fg, short bg)
         {
             auto pair = Pair(fg, bg);
-            if (pair in attrs) 
-                return attrs[pair];
-            else 
-                throw new NCException("Combination of colors %s:%s is not in the color table",
-                        fg, bg);
+            foreach (index, p; pairs)
+                if (p == pair) return COLOR_PAIR(index);
+            throw new NCException("Combination of colors %s:%s is not in the color table");
         }
 
         /* Alternatively, you can use a pair index to get an attribute. */
         chtype opIndex(short pairIndex)
         {
             if (pairIndex in pairs)
-                return attrs[pairs[pairIndex]];
+                return COLOR_PAIR(pairIndex);
             else
                 throw new NCException("Color pair #%s is not in the color table", pairIndex);
         }
@@ -1049,7 +1046,6 @@ final class ColorTable
 
             auto p = Pair(fg, bg);
             pairs[pair] = p;
-            attrs[p] = COLOR_PAIR(pair);
             if (addNew)
                 latestPair++;
             else
@@ -1102,7 +1098,6 @@ final class ColorTable
                 throw new NCException("Attempted to remove color pair #%s, which is " ~
                         "not in the color table to begin with", pairIndex);
             reusablePairs ~= pairIndex;
-            attrs.remove(pairs[pairIndex]);
             pairs.remove(pairIndex);
         }
 
@@ -1435,7 +1430,7 @@ prepChar(C: wint_t, A: chtype)(C ch, A attr)
 
     cchar_t res;
     wchar_t[] str = [ch, 0];
-    setcchar(&res, &str[0], attr, 0, null);
+    setcchar(&res, &str[0], attr, PAIR_NUMBER(attr), null);
     return res;
 }
 
@@ -1451,7 +1446,7 @@ prepChar(C: wint_t, A: chtype)(const C[] chars, A attr)
     /* Hmm, 'const' modifiers apparently were lost during porting the library
        from C to D.
        */
-    setcchar(&res, cast(wchar_t*) &str[0], attr, 0, null);
+    setcchar(&res, cast(wchar_t*) &str[0], attr, PAIR_NUMBER(attr), null);
     return res;
 }
 
