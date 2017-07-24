@@ -84,4 +84,6 @@ void main()
 
     scr.refresh;
     curses.update;
+
+    scr.getch;
 }
