@@ -95,6 +95,14 @@ class UI
             elements ~= e;
         }
 
+        void removeElement(UIElement e)
+        {
+            import std.algorithm;
+            import std.array;
+
+            elements = elements.filter!(el => el != e).array;
+        }
+
         /* Changes currently active element by shifting focus by a given amount. */
         void changeFocus(int by)
         {
