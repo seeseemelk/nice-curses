@@ -123,6 +123,7 @@ class Menu(T): UIElement
         override bool keystroke(WChar key) 
         {
             import std.algorithm;
+            if (values == []) return false;
             if (cfg.down.canFind(key)) {
                 choose(+1);
                 if (cfg.signalChange)
