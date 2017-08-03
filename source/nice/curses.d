@@ -473,7 +473,7 @@ final class Window
             foreach (gr; str.byGrapheme)
                 chars ~= gr[].array.to!(wchar_t[]);
             chars ~= 0;
-            if (waddwstr(ptr, &chars[0]) != OK)
+            if (waddwstr(ptr, chars.ptr) != OK)
                 throw new NCException("Failed to add string '%s'", str);
         } 
 
@@ -660,20 +660,20 @@ final class Window
             /* This is unfortunate, but none of 'insstr' family functions
                accept immutable strings, the result of toStringz. 
                */
-            nc.winsstr(ptr, cast(char*) &(s.toStringz[0]));
+            nc.winsstr(ptr, cast(char*) (s.toStringz));
         }
 
         void insert(int y, int x, string s)
         {
             import std.string;
-            if (nc.mvwinsstr(ptr, y, x, cast(char*) &(s.toStringz[0])) != OK)
+            if (nc.mvwinsstr(ptr, y, x, cast(char*) (s.toStringz)) != OK)
                 throw new NCException("Failed to insert a string at position %s:%s", y, x);
         }
 
         void insert(string s, int n)
         {
             import std.string;
-            nc.winsnstr(ptr, cast(char*) &(s.toStringz[0]), n);
+            nc.winsnstr(ptr, cast(char*) (s.toStringz), n);
         }
 
         void insert(int y, int x, string s, int n)
@@ -682,7 +682,7 @@ final class Window
             /* This fails to compile if template parameters list is omitted.
                Dunno why.
                */
-            if (nc.mvwinsnstr!(WINDOW, int, char)(ptr, y, x, cast(char*) &(s.toStringz[0]), n) 
+            if (nc.mvwinsnstr!(WINDOW, int, char)(ptr, y, x, cast(char*) (s.toStringz), n) 
                     != OK)
                 throw new NCException("Failed to insert a string at position %s:%s", y, x);
         }
@@ -868,7 +868,7 @@ final class Window
 
             wint_t[] buffer = new wint_t[maxLength + 1];
             buffer[$ - 1] = 0;
-            if (wgetn_wstr(ptr, &buffer[0], maxLength) != OK)
+            if (wgetn_wstr(ptr, buffer.ptr, maxLength) != OK)
                 throw new NCException("Failed to get a string");
             string res;
             res.reserve(buffer.length);
@@ -959,8 +959,7 @@ final class Window
 
             auto buffer = new chtype[Curses.lines * Curses.cols + 1];
             buffer[$ - 1] = 0;
-            auto p = &buffer[0];
-            winchstr(ptr, p);
+            winchstr(ptr, buffer.ptr);
             return buffer.until(0).array.dup;
         }
 
@@ -971,8 +970,7 @@ final class Window
             
             auto buffer = new chtype[n + 1];
             buffer[$ - 1] = 0;
-            auto p = &buffer[0];
-            winchnstr(ptr, p, n);
+            winchnstr(ptr, buffer.ptr, n);
             return buffer.until(0).array.dup;
         }
 
@@ -1430,7 +1428,7 @@ prepChar(C: wint_t, A: chtype)(C ch, A attr)
 
     cchar_t res;
     wchar_t[] str = [ch, 0];
-    setcchar(&res, &str[0], attr, PAIR_NUMBER(attr), null);
+    setcchar(&res, str.ptr, attr, PAIR_NUMBER(attr), null);
     return res;
 }
 
@@ -1446,7 +1444,7 @@ prepChar(C: wint_t, A: chtype)(const C[] chars, A attr)
     /* Hmm, 'const' modifiers apparently were lost during porting the library
        from C to D.
        */
-    setcchar(&res, cast(wchar_t*) &str[0], attr, PAIR_NUMBER(attr), null);
+    setcchar(&res, cast(wchar_t*) str.ptr, attr, PAIR_NUMBER(attr), null);
     return res;
 }
 
