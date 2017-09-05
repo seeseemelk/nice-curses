@@ -83,7 +83,6 @@ final class Curses
            */
         ~this()
         {
-            destroy(windows);
             if (cfg.initKeypad) stdscr.keypad(false);
             final switch (curMode) {
                 case Mode.normal: break;
@@ -119,7 +118,6 @@ final class Curses
             import std.algorithm;
             import std.array;
             windows = array(windows.remove!(w => w is which));
-            destroy(which);
         }
 
         /* ---------- general commands ---------- */
@@ -356,7 +354,6 @@ final class Window
             import std.algorithm;
             import std.array;
             children = array(children.remove!(c => c is child));
-            destroy(child);
         }
 
         /* ---------- drawing ---------- */
@@ -406,19 +403,30 @@ final class Window
         }
 
         /* Coords, n, multiple attrs */
-        void addnstr(String, Range) (int y, int x, String str, int n, Range attrs)
+        void addnstr(String, Range)(int y, int x, String str, int n, Range attrs,
+                OOB onOOB = OOB.ignore)
             if (isString!String && isAttrRange!Range)
         {
+            /* Move first. */
             try {
                 move(y, x);
-                addnstr(str, n, attrs);
             } catch (NCException e) {
                 throw new NCException("Failed to write string '%s' at %s:%s", str, y, x);
+            }
+            /* Write second. */
+            try {
+                addnstr(str, n, attrs);
+            } catch (NCException e) {
+                if (onOOB == OOB.except)
+                    throw new NCException("An out-of-bounds condition was " ~
+                            "encountered when writing string '%s' at %s:%s",
+                            str, y, x);
             }
         }
 
         /* n, multiple attrs */
-        void addnstr(String, Range)(String str, int n, Range attrs)
+        void addnstr(String, Range)(String str, int n, Range attrs, 
+                OOB onOOB = OOB.ignore)
             if (isString!String && isAttrRange!Range)
         {
             import std.array;
@@ -426,7 +434,6 @@ final class Window
             import std.range;
             import std.uni;
             auto grs = str.byGrapheme;
-            size_t i = 0;
             foreach (gr; str.byGrapheme) {
                 if (n <= 0) break;
                 if (attrs.empty) break;
@@ -437,28 +444,39 @@ final class Window
                 try {
                     addch(c);
                 } catch (NCException e) {
-                    break;
+                    if (onOOB == OOB.ignore)
+                        break;
+                    else
+                        throw new NCException("An out-of-bounds condition was " ~
+                                "encountered when writing string '%s'", str);
                 }
                 n--;
-                i++;
-            }
+            } /* foreach grapheme */
         }
 
         /* Coords, n, single attr */
         void addnstr(String, A: chtype)
-            (int y, int x, String str, int n, A attr = Attr.normal)
+            (int y, int x, String str, int n, A attr = Attr.normal, OOB onOOB = OOB.ignore)
             if (isString!String)
         {
             try {
                 move(y, x);
-                addnstr(str, n, attr);
             } catch (NCException e) {
                 throw new NCException("Failed to write string '%s' at %s:%s", str, y, x);
             }
+            try {
+                addnstr(str, n, attr);
+            } catch (NCException e) {
+                if (onOOB == OOB.except)
+                    throw new NCException("An out-of-bounds condition was " ~
+                            "encountered when writing string '%s' at %s:%s",
+                            str, y, x);
+            } /* try write */
         } 
 
         /* n, single attr */
-        void addnstr(String, A: chtype)(String str, int n, A attr = Attr.normal)
+        void addnstr(String, A: chtype)(String str, int n, A attr = Attr.normal, 
+                OOB onOOB = OOB.ignore)
             if (isString!String)
         {
             import core.stdc.stddef;
@@ -473,42 +491,43 @@ final class Window
             foreach (gr; str.byGrapheme)
                 chars ~= gr[].array.to!(wchar_t[]);
             chars ~= 0;
-            if (waddwstr(ptr, chars.ptr) != OK)
+            if (waddwstr(ptr, chars.ptr) != OK && onOOB == OOB.except)
                 throw new NCException("Failed to add string '%s'", str);
         } 
 
         /* Coords, multiple attrs */
-        void addstr(String, Range)(int y, int x, String str, Range attrs)
+        void addstr(String, Range)(int y, int x, String str, Range attrs, 
+                OOB onOOB = OOB.ignore)
             if (isString!String && isAttrRange!Range)
         {
-            addnstr(y, x, str, width * height, attrs);
+            addnstr(y, x, str, width * height, attrs, onOOB);
         }
 
         /* Multiple attrs */
-        void addstr(String, Range)(String str, Range attrs)
+        void addstr(String, Range)(String str, Range attrs, OOB onOOB = OOB.ignore)
             if (isString!String && isAttrRange!Range)
         {
-            addnstr(str, width * height, attrs);
+            addnstr(str, width * height, attrs, onOOB);
         }
 
         /* Coords, single attr */
-        void addstr(String, A: chtype)(int y, int x, String str, A attr = Attr.normal)
+        void addstr(String, A: chtype)(int y, int x, String str, A attr = Attr.normal,
+                OOB onOOB = OOB.ignore)
             if (isString!String)
         {
-            addnstr(y, x, str, width * height, attr);
+            addnstr(y, x, str, width * height, attr, onOOB);
         }
 
         /* Single attr */
-        void addstr(String, A: chtype)(String str, A attr = Attr.normal)
+        void addstr(String, A: chtype)(String str, A attr = Attr.normal, 
+                OOB onOOB = OOB.ignore)
             if (isString!String)
         {
-            addnstr(str, width * height, attr);
+            addnstr(str, width * height, attr, onOOB);
         }
 
-        /* This will silently drop any characters that don't fit into the 
-           window. 
-
-           The exact behavious depends on the 'alignment' parameter.
+        /*
+           The exact behaviour depends on the 'alignment' parameter.
            If it's Align.left, then y and x are the coordinates of text's
            upper left corner.
            If it's Align.center, then they are the coordinates of text's first
@@ -519,7 +538,7 @@ final class Window
            Note that this method uses the entire window.
          */
         void addAligned(String, Range)(int y, int x, String str, 
-                Align alignment, Range attrs)
+                Align alignment, Range attrs, OOB onOOB = OOB.ignore)
             if (isString!String && isAttrRange!Range)
         {
             import std.algorithm;
@@ -560,7 +579,12 @@ final class Window
                     try {
                         addch(fromGrapheme(gr, attr));
                     } catch (NCException e) {
-                        return;
+                        if (onOOB == OOB.except)
+                            throw new NCException("An out-of-bounds condition " ~
+                                    "was encountered when adding aligned string '%s'" ~
+                                    "at %s:%s", str, y, x);
+                        else
+                            return;
                     }
                     if (curY >= height) return;
                     if (curY > y) {
@@ -573,37 +597,39 @@ final class Window
         } /* addAligned */
 
         void addAligned(String, A: chtype)(int y, int x, String str, 
-                Align alignment, A attr = Attr.normal)
+                Align alignment, A attr = Attr.normal, OOB onOOB = OOB.ignore)
             if (isString!String)
         {
             import std.range;
-            addAligned(y, x, str, alignment, cycle([attr]));
+            addAligned(y, x, str, alignment, cycle([attr]), onOOB);
         }
 
         /* Use the whole window and figure out exact X coordinate. */
-        void addAligned(String, Range) (int y, String str, Align alignment, Range attrs)
+        void addAligned(String, Range) (int y, String str, Align alignment, 
+                Range attrs, OOB onOOB = OOB.ignore)
             if (isString!String && isAttrRange!Range)
         {
             final switch(alignment) {
                 case Align.left:
-                    addAligned(y, 0, str, alignment, attrs);
+                    addAligned(y, 0, str, alignment, attrs, onOOB);
                     break;
                 case Align.center:
-                    addAligned(y, width / 2, str, alignment, attrs);
+                    addAligned(y, width / 2, str, alignment, attrs, onOOB);
                     break;
                 case Align.right:
-                    addAligned(y, width - 1, str, alignment, attrs);
+                    addAligned(y, width - 1, str, alignment, attrs, onOOB);
                     break;
             }
         }
 
         /* Ditto, but with single attribute. */
-        void addAligned(String, A: chtype) (int y, String str, Align alignment, A attr)
+        void addAligned(String, A: chtype) (int y, String str, Align alignment, 
+                A attr, OOB onOOB = OOB.ignore)
             if (isString!String)
         {
             import std.range;
 
-            addAligned(y, str, alignment, cycle([attr]));
+            addAligned(y, str, alignment, cycle([attr]), onOOB);
         }
 
         void border(chtype left, chtype right, chtype top, chtype bottom,
@@ -1209,6 +1235,13 @@ struct CChar
 struct RGB
 {
     short r, g, b;
+}
+
+/* Out-of-bounds condition handling. */
+enum OOB
+{
+    ignore,
+    except
 }
 
 enum Attr: chtype
