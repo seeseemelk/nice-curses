@@ -147,43 +147,46 @@ element type implicitly castable to `chtype`.
   Draws a single character at the given position with given attribute.
 - `void addch(C: wint_t, A: chtype)(C ch, A attr = Attr.normal)` Draws a single
   character at the current cursor position with given attribute.
-- `void addnstr(String, Range)(int y, int x, String str, int n, Range attrs)`
+- `void addnstr(String, Range)(int y, int x, String str, int n, Range attrs, OOB onOOB = OOB.ignore)`
   Draws a string at the given position, but no more than `n` characters. Each
   character gets an attribute from `attrs` range (`str` and `attrs` are 
   iterated over in lockstep). Drawing stops when any of the following
   conditions occur: `str` is exausted, `attrs` is exausted, `n` characters were
-  drawn, window's lower right corner was reached.
-- `void addnstr(String, Range)(String str, int n, Range attrs)`
+  drawn, window's lower right corner was reached. If the string doesn't fit
+  into the window and `onOOB` is set to `OOB.except`, an exception will be 
+  thrown. Otherwise the method will silently drop the rest of the input.
+- `void addnstr(String, Range)(String str, int n, Range attrs, OOB onOOB = OOB.ignore)`
   Same as before, but uses current cursor coordinates.
-- `void addnstr(String, A: chtype)(int y, int x, String str, int n, A attr = Attr.normal)`
+- `void addnstr(String, A: chtype)(int y, int x, String str, int n, A attr = Attr.normal, OOB onOOB = OOB.ignore)`
   Same as the first one, but uses the same attribute for the entire string.
-- `void addnstr(String, A: chtype)(String str, int n, A attr = Attr.normal)`
+- `void addnstr(String, A: chtype)(String str, int n, A attr = Attr.normal, OOB onOOB = OOB.ignore)`
   Same as the previous one, but uses current cursor coordinates.
-- `void addstr(String, Range)(int y, int x, String str, Range attrs)`
+- `void addstr(String, Range)(int y, int x, String str, Range attrs, OOB onOOB = OOB.ignore)`
   Same as the first `addnstr`, but doesn't impose a restriction on the number
   of written characters.
-- `void addstr(String, Range)(String str, Range attrs)`
+- `void addstr(String, Range)(String str, Range attrs, OOB onOOB = OOB.ignore)`
   Same as the previous one, but uses current cursor's coordinates.
-- `void addstr(String, A: chtype)(int y, int x, String str, A attr = Attr.normal)`
+- `void addstr(String, A: chtype)(int y, int x, String str, A attr = Attr.normal, OOB onOOB = OOB.ignore)`
   Same as the first `addstr`, but uses the same attribute for the entire
   string.
-- `void addstr(String, A: chtype)(String str, A attr = Attr.normal)`
+- `void addstr(String, A: chtype)(String str, A attr = Attr.normal, OOB onOOB = OOB.ignore)`
   Same as the previous one, but uses current cursor's cooridnates.
-- `void addAligned(String, Range)(int y, int x, String str, Align alignment, Range attrs`
+- `void addAligned(String, Range)(int y, int x, String str, Align alignment, Range attrs, OOB onOOB = OOB.ignore)`
   The behaviour depends on the `alignment` parameter. If it's `Align.left` then
   y and x are the coordinates of the text's upper-left corner, and the text
   will be left-justified. If it's `Align.center` then y and x are the
   coordinates of the first line's center, and the text will be centered around
   this point. If it's `Align.right`, then y and x are the coordinates of the
-  text's upper-right corner, and the text will be right-justified. The text
-  that doesn't fit into the window will be silently discarded.
+  text's upper-right corner, and the text will be right-justified. If `onOOB` is
+  set to `OOB.ignore` the text that doesn't fit into the window will be silently
+  discarded, otherwise an exception will be thrown.
 - `void addAligned(String, A: chtype)
-      (int y, int x, String str, Align alignment, A attr = Attr.normal)`
+      (int y, int x, String str, Align alignment, A attr = Attr.normal, OOB onOOB = OOB.ignore)`
   Same as before, but uses the same attribute for the entire string.
-- `void addAligned(String, Range)(int y, String str, Align alignment, Range attrs)`
+- `void addAligned(String, Range)(int y, String str, Align alignment, Range attrs, OOB onOOB = OOB.ignore)`
   Same as the first one, but uses the whole window's width and figures out x
   coordinate from the `alignment` parameter.
-- `void addAligned(String, A: chtype)(int y, String str, Align alignment, A attr)`
+- `void addAligned(String, A: chtype)(int y, String str, Align alignment, A attr, OOB onOOB = OOB.ignore)`
   Same as the previous one, but uses the same attribute for the entire string.
 - `void border(chtype left, chtype right, chtype top, chtype bottom,
         chtype topLeft, chtype topRight, chtype bottomLeft, chtype bottomRight)`
