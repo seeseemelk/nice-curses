@@ -228,8 +228,10 @@ element type implicitly castable to `chtype`.
   Blanks are copied.
 
 These are for retrieving information from the window.
-- `int getch()` - get a single narrow key from the keyboard.
-- `WChar getwch()` - get a single wide character from the keyboard.
+- `int getch()` - get a single narrow key from the keyboard. Might throw in
+  timeout mode (see `timeout` method).
+- `WChar getwch()` - get a single wide character from the keyboard. Might throw
+  in timeout mode (see `timeout` method).
 - `int curX()` - get the X coordinate of the cursor.
 - `int curY()` - get the Y coordinate of the cursor.
 - `int width()` - get the width of the window.
