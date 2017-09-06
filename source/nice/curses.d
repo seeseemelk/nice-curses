@@ -624,7 +624,7 @@ final class Window
 
         /* Ditto, but with single attribute. */
         void addAligned(String, A: chtype) (int y, String str, Align alignment, 
-                A attr, OOB onOOB = OOB.ignore)
+                A attr = Attr.normal, OOB onOOB = OOB.ignore)
             if (isString!String)
         {
             import std.range;
@@ -837,7 +837,11 @@ final class Window
             if (nc.wscrl(ptr, n) != OK)
                 throw new NCException("Failed to scroll a window by %s lines", n);
         }
-       
+
+        void timeout(int ms)
+        {
+            nc.wtimeout(ptr, ms);
+        }
 
         /* ---------- information retrieval ---------- */
 

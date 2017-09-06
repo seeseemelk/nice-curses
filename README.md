@@ -128,6 +128,7 @@ These are the methods for general manipulation of windows:
 - `void insdel(int n)` - delete and insert `n` lines under the cursor.
 - `void insertln()` - insert a line at the top of the current line.
 - `void scroll(int n)` - scroll the window by `n` lines.
+- `void timeout(int ms)` - sets the timeout value to ms milliseconds, see 'man 3 timeout'.
 
 These are the methods for child windows management:
 - `Window subwin(int nlines, int ncols, int y, int x)` - create a subwindow.
