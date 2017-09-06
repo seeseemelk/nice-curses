@@ -1,0 +1,6 @@
+name "timeout"
+description "An example for testing timeout functionality."
+authors "Michail Pevnev"
+copyright "Copyright © 2017, Michail Pevnev"
+license "Boost"
+dependency "nice-curses" path="../../"
