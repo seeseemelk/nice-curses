@@ -46,7 +46,7 @@ A Curses.Config struct has following fields:
   program will enter `nonl` mode (consult ncurses docs for this).
 - `bool nodelay = false` - when set, the program will enter nodelay mode.
 
-# Usage as a ncurses wrapper
+# Usage as an ncurses wrapper
 Once the library is set up, you can either create new windows with `newWindow`
 method of a Curses object, or use its field `stdscr`. Perform some drawing on
 them, then call `refresh` method of a Window object on each, and then call
