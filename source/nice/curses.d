@@ -1190,7 +1190,7 @@ struct WChar
 
         this(Key key)
         {
-            this(key, true);
+            this(cast(wint_t)key, true);
         }
 }
 
@@ -1282,7 +1282,7 @@ enum StdColor: short
     white   = COLOR_WHITE,
 }
 
-enum Key
+enum Key: int
 {
     codeYes   = KEY_CODE_YES,
     min       = KEY_MIN,
@@ -1477,7 +1477,12 @@ prepChar(C: wint_t, A: chtype)(const C[] chars, A attr)
     import std.range;
 
     cchar_t res;
-    const wchar_t[] str = (chars.take(CCHARW_MAX).array) ~ 0;
+    version(Win32) {
+        import std.conv: wtext;
+        const wchar_t[] str = (chars.take(CCHARW_MAX).wtext) ~ 0;
+    } else {
+        const wchar_t[] str = (chars.take(CCHARW_MAX).array) ~ 0;
+    }
     /* Hmm, 'const' modifiers apparently were lost during porting the library
        from C to D.
        */
@@ -1501,7 +1506,12 @@ fromGrapheme(Grapheme g, chtype attr = Attr.normal)
 {
     import std.array;
 
-    return CChar(g[].array, attr);
+    version(Win32) {
+        import std.conv: wtext;
+        return CChar(g[].wtext, attr);
+    } else {
+        return CChar(g[].array, attr);
+    }
 }
 
 /* Returns visual lenght of a string. */
