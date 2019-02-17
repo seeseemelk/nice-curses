@@ -26,6 +26,10 @@ details) and feed it to the Curses constructor. In other words
 That's it. The library is initialized and ready for work. As a side note, 
 consider adding `scope(exit) destroy(curses);` somewhere nearby.
 
+Note that Unicode input and output, while supported, is very likely to be
+affected by the locale settings of your terminal. If you see garbage, check
+which locale you're using.
+
 ## struct Curses.Config
 A Curses.Config struct has following fields:
 - `bool useColors = true` - set this to request color support from the library.
