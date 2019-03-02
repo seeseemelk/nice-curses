@@ -1,1 +1,5 @@
-*
+dub.selections.json
+*.a
+tags
+.dub/
+bin/

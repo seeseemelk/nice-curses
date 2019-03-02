@@ -5,6 +5,7 @@ copyright "Copyright © 2017, michail"
 license "Boost"
 dependency "ncurses" version="~master" configuration="minimal"
 targetType "library"
+targetPath "bin"
 
 configuration "full" { 
 }
