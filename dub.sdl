@@ -17,3 +17,14 @@ configuration "base-ui" {
 configuration "minimal" { 
 	excludedSourceFiles "source/nice/ui/*"
 }
+
+subPackage {
+    name "tests:basic"
+    targetType "executable"
+    sourcePaths "tests/basic"
+    importPaths "tests/basic"
+    dependency "nice-curses" path="./"
+    subConfiguration "nice-curses" "minimal"
+
+    dependency "d-unit" version="~>0.9.0"
+}

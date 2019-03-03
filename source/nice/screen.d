@@ -29,6 +29,7 @@ public abstract class Screen
 
     protected:
         abstract void unsetTerm();
+        abstract void finish();
     
     public:
         abstract void setTerm();
@@ -39,22 +40,10 @@ public abstract class Screen
             unsetTerm();
         }
 
-    /* ---------- Plumbing ---------- */
-
-    ~this()
-    {
-        final switch (curMode) {
-            case CursesMode.normal: break;
-            case CursesMode.cbreak: nc.nocbreak(); break;
-            case CursesMode.halfdelay: nc.nocbreak(); break;
-            case CursesMode.raw: nc.noraw(); break;
+        void finishPkg()
+        {
+            finish();
         }
-        if (!echoMode_)
-            nc.echo();
-        nc.nl();
-        foreach (w; windows)
-            w.free();
-    }
 
     /* ---------- Public API ---------- */
 
@@ -293,5 +282,23 @@ package final class StdTerm: Screen
 
     protected:
         override void unsetTerm() { }
+
+        override void finish()
+        {
+            final switch (curMode) {
+                case CursesMode.normal: break;
+                case CursesMode.cbreak: nc.nocbreak(); break;
+                case CursesMode.halfdelay: nc.nocbreak(); break;
+                case CursesMode.raw: nc.noraw(); break;
+            }
+            if (!echoMode_)
+                nc.echo();
+            nc.nonl();
+            foreach (w; windows)
+                w.free();
+            stdscr.free();
+            nc.endwin();
+            nc.doupdate();
+        }
 
 }

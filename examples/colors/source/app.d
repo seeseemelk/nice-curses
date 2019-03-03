@@ -1,10 +1,10 @@
+import nice.curses;
+
 void main()
 {
-    import nice.curses;
-
-    auto curses = new Curses();
+    auto curses = new CursesMono();
     auto scr = curses.stdscr;
-    auto colors = curses.colors;
+    auto colors = curses.term.colors;
 
     auto red = colors[StdColor.red, StdColor.black];
     auto blue = colors[StdColor.blue, StdColor.black];
@@ -14,6 +14,6 @@ void main()
     scr.addch(CChar("A", blue));
 
     scr.refresh;
-    curses.update;
+    curses.term.update;
     scr.getch;
 }

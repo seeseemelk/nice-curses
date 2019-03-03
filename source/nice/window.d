@@ -37,12 +37,11 @@ final class Window
             keypad(setKeypad);
         }
 
-        void free(bool doDelwin = true)
+        void free()
         {
             foreach (child; children)
                 child.free();
-            if (doDelwin)
-                nc.delwin(ptr);
+            nc.delwin(ptr);
         }
 
     public:

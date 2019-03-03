@@ -29,4 +29,9 @@ final class CursesMono
             stdscr = term.stdscr;
         }
 
+        void finish()
+        {
+            term.finishPkg();
+        }
+
 }
