@@ -2,21 +2,29 @@ module nice.window;
 
 import std.uni;
 
-import deimos.ncurses;
+import nc = deimos.ncurses;
 
 import nice.color_table;
 import nice.screen: Screen;
 import nice.util;
 
-package alias nc = deimos.ncurses;
+/* Underlying ncurses functions should be marked via explicit nc. prefix, but
+   types are fair game.
+   */
+alias cchar_t = nc.cchar_t;
+alias chtype = nc.chtype;
+alias wint_t = nc.wint_t;
+alias WINDOW = nc.WINDOW;
+
+alias OK = nc.OK;
+alias ERR = nc.ERR;
 
 final class Window
 {
     private:
-        Window[] children;
-        Window parent;
-        bool isKeypad;
         Screen screen;
+        Window[] children;
+        bool isKeypad;
 
     package:
         WINDOW* ptr;
@@ -24,18 +32,17 @@ final class Window
         this(Screen screen, WINDOW* fromPtr, bool setKeypad = true)
         {
             this.screen = screen;
-            screen.setTerm();
-            scope(exit) screen.unsetTerm();
-
             colors = screen.colors;
             ptr = fromPtr;
             keypad(setKeypad);
         }
 
-        ~this()
+        void free(bool doDelwin = true)
         {
-            keypad(false);
-            delwin(ptr);
+            foreach (child; children)
+                child.free();
+            if (doDelwin)
+                nc.delwin(ptr);
         }
 
     public:
@@ -56,14 +63,14 @@ final class Window
         /* This one moves the cursor. */
         void move(int y, int x)
         {
-            if (wmove(ptr, y, x) != OK) 
+            if (nc.wmove(ptr, y, x) != OK) 
                 throw new NCException("Failed to move to position %s:%s", y, x);
         }
 
         /* This one moves the window. */
         void moveWindow(int y, int x)
         {
-            if (mvwin(ptr, y, x) != OK)
+            if (nc.mvwin(ptr, y, x) != OK)
                 throw new NCException("Failed to move a window to position %s:%s", y, x);
         }
 
@@ -81,8 +88,7 @@ final class Window
                 throw new NCException(
                         "Failed to create a subwindow at %s:%s with height %s and width %s",
                         y, x, nlines, ncols);
-            Window res = new Window(library, p, isKeypad);
-            res.parent = this;
+            Window res = new Window(screen, p, isKeypad);
             children ~= res;
             return res;
         }
@@ -94,17 +100,18 @@ final class Window
                 throw new NCException(
                         "Failed to create a subwindow at %s:%s with height %s and width %s",
                         y, x, nlines, ncols);
-            Window res = new Window(library, p, isKeypad);
-            res.parent = this;
+            Window res = new Window(screen, p, isKeypad);
             children ~= res;
             return res;
         }
 
         void deleteChild(Window child)
         {
-            import std.algorithm;
-            import std.array;
-            children = array(children.remove!(c => c is child));
+            import std.algorithm: canFind, remove;
+            if (children.canFind(child)) {
+                children.remove!(cur => cur is child);
+                child.free();
+            }
         }
 
         /* ---------- drawing ---------- */
@@ -202,7 +209,7 @@ final class Window
                                 "encountered when writing string '%s'", str);
                 }
                 n--;
-            } /* foreach grapheme */
+            }
         }
 
         /* Coords, n, single attr */
@@ -598,7 +605,7 @@ final class Window
 
         int getch()
         {
-            int res = wgetch(ptr);
+            int res = nc.wgetch(ptr);
             if (res == ERR)
                 throw new NCException("Failed to get a character");
             return res;
@@ -610,8 +617,8 @@ final class Window
         WChar getwch()
         {
             wint_t chr;
-            int res = wget_wch(ptr, &chr);
-            if (res == KEY_CODE_YES)
+            int res = nc.wget_wch(ptr, &chr);
+            if (res == nc.KEY_CODE_YES)
                 return WChar(chr, true);
             else if (res == OK)
                 return WChar(chr, false);
@@ -643,13 +650,13 @@ final class Window
         {
             import std.conv;
 
-            bool isEcho = library.echoMode;
-            library.echo(echoChars);
-            scope(exit) library.echo(isEcho);
+            const bool isEcho = screen.echoMode;
+            screen.echo(echoChars);
+            scope(exit) screen.echo(isEcho);
 
             wint_t[] buffer = new wint_t[maxLength + 1];
             buffer[$ - 1] = 0;
-            if (wgetn_wstr(ptr, buffer.ptr, maxLength) != OK)
+            if (nc.wgetn_wstr(ptr, buffer.ptr, maxLength) != OK)
                 throw new NCException("Failed to get a string");
             string res;
             res.reserve(buffer.length);
@@ -667,9 +674,9 @@ final class Window
         {
             import std.conv;
 
-            bool isEcho = library.echoMode;
-            library.echo(false);
-            scope(exit) library.echo(isEcho);
+            bool isEcho = screen.echoMode;
+            screen.echo(false);
+            scope(exit) screen.echo(isEcho);
 
             string res;
             int x = curX;
@@ -708,7 +715,7 @@ final class Window
                     if (!echoChars) continue;
                     x--;
                     if (x < 0) {
-                        x = library.cols - 1;
+                        x = screen.cols - 1;
                         y--;
                     }
                     if (y < 0) y = 0; 
@@ -738,9 +745,9 @@ final class Window
             import std.algorithm;
             import std.array;
 
-            auto buffer = new chtype[library.lines * library.cols + 1];
+            auto buffer = new chtype[screen.lines * screen.cols + 1];
             buffer[$ - 1] = 0;
-            winchstr(ptr, buffer.ptr);
+            nc.winchstr(ptr, buffer.ptr);
             return buffer.until(0).array.dup;
         }
 
@@ -751,7 +758,7 @@ final class Window
             
             auto buffer = new chtype[n + 1];
             buffer[$ - 1] = 0;
-            winchnstr(ptr, buffer.ptr, n);
+            nc.winchnstr(ptr, buffer.ptr, n);
             return buffer.until(0).array.dup;
         }
 

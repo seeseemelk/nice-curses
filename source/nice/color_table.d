@@ -2,12 +2,12 @@ module nice.color_table;
 
 import std.uni;
 
-import deimos.ncurses;
+import nc = deimos.ncurses;
 
-import nice.curses: CursesBase;
+import nice.screen: Screen;
 import nice.util;
 
-package alias nc = deimos.ncurses;
+alias chtype = nc.chtype;
 
 final class ColorTable
 {
@@ -21,13 +21,13 @@ final class ColorTable
         short latestColor;
         short[] reusableColors;
 
-        CursesBase library;
+        Screen screen;
 
     package:
 
-        this(CursesBase lib, bool useStdColors)
+        this(Screen scr, bool useStdColors)
         {
-            library = lib;
+            screen = scr;
             if (useStdColors) {
                 latestColor = StdColor.max + 1;
                 initDefaultColors;
@@ -42,17 +42,23 @@ final class ColorTable
            represents. */
         chtype opIndex(short fg, short bg)
         {
+            screen.setTerm();
+            scope(exit) screen.unsetTermPkg();
+
             const auto pair = Pair(fg, bg);
             foreach (index, p; pairs)
-                if (p == pair) return COLOR_PAIR(index);
+                if (p == pair) return nc.COLOR_PAIR(index);
             throw new NCException("Combination of colors %s:%s is not in the color table");
         }
 
         /* Alternatively, you can use a pair index to get an attribute. */
         chtype opIndex(short pairIndex)
         {
+            screen.setTerm();
+            scope(exit) screen.unsetTermPkg();
+
             if (pairIndex in pairs)
-                return COLOR_PAIR(pairIndex);
+                return nc.COLOR_PAIR(pairIndex);
             else
                 throw new NCException("Color pair #%s is not in the color table", pairIndex);
         }
@@ -60,13 +66,16 @@ final class ColorTable
         /* Return the index of a newly created pair. */
         short addPair(short fg, short bg)
         {
+            screen.setTerm();
+            scope(exit) screen.unsetTermPkg();
+
             const bool addNew = reusablePairs == [];
             short pair;
             if (addNew) 
                 pair = latestPair;
             else
                 pair = reusablePairs[0];
-            if (init_pair(pair, fg, bg) != OK)
+            if (nc.init_pair(pair, fg, bg) != nc.OK)
                 throw new NCException("Failed to initialize color pair %s:%s", fg, bg);
 
             const auto p = Pair(fg, bg);
@@ -81,10 +90,13 @@ final class ColorTable
         /* Redefine a color. */
         void redefineColor(short color, short r, short g, short b)
         {
-            if (color >= library.maxColors)
+            screen.setTerm();
+            scope(exit) screen.unsetTermPkg();
+
+            if (color >= screen.maxColors)
                 throw new NCException("A color with index %s requested, but the " ~
-                        "terminal supports only %s colors", color, library.maxColors);
-            if (init_color(color, r, g, b) != OK)
+                        "terminal supports only %s colors", color, screen.maxColors);
+            if (nc.init_color(color, r, g, b) != nc.OK)
                 throw new NCException("Failed to initialize a color #%s with RGB content " ~
                         "%s:%s:%s", color, r, g, b);
         }
@@ -92,7 +104,10 @@ final class ColorTable
         /* Return the index of a newly defined color. */
         short addColor(short r, short g, short b)
         {
-            if (!library.canChangeColor)
+            screen.setTerm();
+            scope(exit) screen.unsetTermPkg();
+
+            if (!screen.canChangeColor)
                 throw new NCException("The terminal doesn't support changing colors");
 
             const bool addNew = reusableColors == [];

@@ -6,7 +6,7 @@ package alias nc = deimos.ncurses;
 
 import nice.color_table;
 import nice.config;
-import nice.curses: CursesBase;
+import nice.curses: CursesMono;
 import nice.util;
 import nice.window;
 
@@ -16,7 +16,7 @@ public abstract class Screen
 
     private:
         Window[] windows;
-        bool echoMode;
+        bool echoMode_;
 
     protected:
         CursesConfig cfg;
@@ -33,6 +33,12 @@ public abstract class Screen
     public:
         abstract void setTerm();
 
+    package:
+        void unsetTermPkg()
+        {
+            unsetTerm();
+        }
+
     /* ---------- Plumbing ---------- */
 
     ~this()
@@ -43,7 +49,7 @@ public abstract class Screen
             case CursesMode.halfdelay: nc.nocbreak(); break;
             case CursesMode.raw: nc.noraw(); break;
         }
-        if (!echoMode)
+        if (!echoMode_)
             nc.echo();
         nc.nl();
         foreach (w; windows)
@@ -58,7 +64,7 @@ public abstract class Screen
 
         Window newWindow(int nlines, int ncols, int beginY, int beginX)
         {
-
+            return null;
         }
 
         /* ---------- General commands ---------- */
@@ -84,7 +90,7 @@ public abstract class Screen
                 nc.echo();
             else
                 nc.noecho();
-            echoMode = set;
+            echoMode_ = set;
             unsetTerm();
         }
 
@@ -99,6 +105,16 @@ public abstract class Screen
         {
             setTerm();
             nc.napms(ms);
+            unsetTerm();
+        }
+
+        void nl(bool set)
+        {
+            setTerm();
+            if (set)
+                nc.nl();
+            else
+                nc.nonl();
             unsetTerm();
         }
 
@@ -220,6 +236,11 @@ public abstract class Screen
             return RGB(r, g, b);
         }
 
+        bool echoMode()
+        {
+            return echoMode_;
+        }
+
         bool hasColors()
         {
             setTerm();
@@ -240,16 +261,15 @@ public abstract class Screen
 
 }
 
-package final class Stdscr: Screen
+package final class StdTerm: Screen
 {
     package:
         Window stdscr;
 
-        this(CursesBase lib, CursesConfig config) 
+        this(CursesConfig config) 
         {
-            library = lib;
             cfg = config;
-            stdscr = new Window(lib, nc.initscr(), config.initKeypad);
+            stdscr = new Window(this, nc.initscr(), config.initKeypad);
 
             cfg = config;
             if (config.useColors) {
@@ -260,10 +280,10 @@ package final class Stdscr: Screen
                 stdscr.colors = colors;
             }
 
-            setEcho(!config.disableEcho);
+            echo(!config.disableEcho);
             setMode(config.mode);
             setCursor(config.cursLevel);
-            setNL(config.nl);
+            nl(config.nl);
         }
 
         /* --- Overrides --- */
