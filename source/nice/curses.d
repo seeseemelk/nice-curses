@@ -14,6 +14,7 @@ public import deimos.ncurses: chtype, wint_t;
 package alias nc = deimos.ncurses; /* Just for convenience. */
 
 public import nice.color_table;
+public import nice.config;
 public import nice.util;
 public import nice.window;
 
@@ -28,30 +29,12 @@ package abstract class CursesBase
         ColorTable colors;
         static bool echoMode = true;
 
-        /* This struct controls initialization and finalization of the library. */
-        static struct Config
-        {
-            bool useColors = true;
-            bool useStdColors = true;
-            bool disableEcho = false;
-            Mode mode = Mode.normal;
-            int cursLevel = 1;
-            bool initKeypad = true;
-            bool nl = false;
-            bool nodelay = false;
-        }
-
-        static enum Mode
-        {
-            normal,
-            cbreak,
-            halfdelay,
-            raw,
-        }
 
         /* Initialize the library. */
         this(Config config = Config()) {
-
+            import core.stdc.locale: LC_ALL, setlocale;
+            cfg = config;
+            setlocale(LC_ALL, "");
         }
 
         ~this()
@@ -233,9 +216,7 @@ final class Curses: CursesBase
 
         this(Config config = Config())
         {
-            import core.stdc.locale: LC_ALL, setlocale;
-            cfg = config;
-            setlocale(LC_ALL, "");
+            super(config);
 
             if (config.useColors) {
                 import std.exception: enforce;

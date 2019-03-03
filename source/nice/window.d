@@ -4,9 +4,9 @@ import std.uni;
 
 import deimos.ncurses;
 
-import nice.curses: CursesBase;
-import nice.util;
 import nice.color_table;
+import nice.screen: Screen;
+import nice.util;
 
 package alias nc = deimos.ncurses;
 
@@ -16,28 +16,20 @@ final class Window
         Window[] children;
         Window parent;
         bool isKeypad;
-        CursesBase library;
+        Screen screen;
 
     package:
         WINDOW* ptr;
 
-    package:
-        this(CursesBase lib, WINDOW* fromPtr, bool setKeypad = true)
+        this(Screen screen, WINDOW* fromPtr, bool setKeypad = true)
         {
-            library = lib;
-            colors = library.colors;
+            this.screen = screen;
+            screen.setTerm();
+            scope(exit) screen.unsetTerm();
+
+            colors = screen.colors;
             ptr = fromPtr;
             keypad(setKeypad);
-            isKeypad = setKeypad;
-        }
-
-        this(CursesBase lib, int nlines, int ncols, int y, int x, bool setKeypad = true)
-        {
-            library = lib;
-            colors = lib.colors;
-            ptr = newwin(nlines, ncols, y, x);
-            keypad(setKeypad);
-            isKeypad = setKeypad;
         }
 
         ~this()
