@@ -1,14 +1,17 @@
 module nice.screen;
 
-import deimos.ncurses;
+import std.stdio;
 
-package alias nc = deimos.ncurses;
+import nc = deimos.ncurses;
 
 import nice.color_table;
 import nice.config;
-import nice.curses: CursesMono;
+import nice.curses: CursesMono, CursesMulti;
+import nice.exception;
 import nice.util;
 import nice.window;
+
+private alias SCREEN = nc.SCREEN;
 
 public abstract class Screen 
 {
@@ -17,42 +20,89 @@ public abstract class Screen
     private:
         Window[] windows;
         bool echoMode_;
+        uint windowId;
 
     protected:
+        const SCREEN *ptr;
         CursesConfig cfg;
         CursesMode curMode;
+        bool wasFreed;
 
     public:
+        immutable uint id;
         ColorTable colors;
 
     /* ---------- Customizable behaviour ---------- */
 
-    protected:
-        abstract void unsetTerm();
-        abstract void finish();
-    
-    public:
-        abstract void setTerm();
+        abstract void free();
+        abstract Screen setTerm();
+
+    /* ---------- Helpers ---------- */
 
     package:
-        void unsetTermPkg()
+
+        this(uint id, CursesConfig cfg, SCREEN *ptr)
         {
-            unsetTerm();
+            this.id = id;
+            this.ptr = ptr;
+            this.cfg = cfg;
         }
 
-        void finishPkg()
+        uint nextWindowId()
         {
-            finish();
+            return windowId++;
+        }
+
+        void setupColors()
+        {
+            if (cfg.useColors) {
+                import std.exception: enforce;
+                enforce(nc.has_colors(), "Terminal does not support colors");
+                nc.start_color();
+                colors = new ColorTable(this, cfg.useStdColors);
+            }
+        }
+
+        void initialSetup()
+        {
+            echo(!cfg.disableEcho);
+            setMode(cfg.mode);
+            setCursor(cfg.cursLevel);
+            nl(cfg.nl);
+        }
+
+        void clearWindows()
+        {
+            foreach (w; windows)
+                w.free();
+            windows = [];
         }
 
     /* ---------- Public API ---------- */
 
+        /* ---------- Really important things ---------- */
+
     public:
+
+        bool isValid() 
+        {
+            return !wasFreed;
+        }
+
+        void throwUnlessValid() 
+        {
+            if (wasFreed) {
+                throw new UseAfterFreeException(
+                        "Screen with id %s was used after it was freed",
+                        id);
+            }
+        }
 
         /* ---------- Window manipulation ---------- */
 
         Window newWindow(int nlines, int ncols, int beginY, int beginX)
         {
+            throwUnlessValid();
             return null;
         }
 
@@ -60,77 +110,68 @@ public abstract class Screen
 
         void beep()
         {
-            setTerm();
+            mixin(switchTerms);
             nc.beep();
-            unsetTerm();
         }
 
         void delayOutput(int ms)
         {
-            setTerm();
+            mixin(switchTerms);
             nc.delay_output(ms);
-            unsetTerm();
         }
 
         void echo(bool set)
         {
-            setTerm();
+            mixin(switchTerms);
             if (set)
                 nc.echo();
             else
                 nc.noecho();
             echoMode_ = set;
-            unsetTerm();
         }
 
         void flushInput()
         {
-            setTerm();
+            mixin(switchTerms);
             nc.flushinp();
-            unsetTerm();
         }
 
         void nap(int ms)
         {
-            setTerm();
+            mixin(switchTerms);
             nc.napms(ms);
-            unsetTerm();
         }
 
         void nl(bool set)
         {
-            setTerm();
+            mixin(switchTerms);
             if (set)
                 nc.nl();
             else
                 nc.nonl();
-            unsetTerm();
         }
 
         void resetTTY()
         {
-            setTerm();
+            mixin(switchTerms);
             nc.resetty();
-            unsetTerm();
         }
 
         void saveTTY()
         {
-            setTerm();
+            mixin(switchTerms);
             nc.savetty();
-            unsetTerm();
         }
 
         void setCursor(int level)
         {
-            setTerm();
+            mixin(switchTerms);
             nc.curs_set(level);
-            unsetTerm();
         }
 
         void setMode(CursesMode mode, int delayForHD = 1)
         {
-            setTerm();
+            mixin(switchTerms);
             final switch (mode) {
                 case CursesMode.cbreak: nc.cbreak(); break;
                 case CursesMode.halfdelay: nc.halfdelay(delayForHD); break;
@@ -138,64 +179,55 @@ public abstract class Screen
                 case CursesMode.raw: nc.raw(); break;
             }
             curMode = mode;
-            unsetTerm();
         }
 
         void ungetch(int ch)
         {
-            setTerm();
+            mixin(switchTerms);
             nc.ungetch(ch);
-            unsetTerm();
         }
 
         void update()
         {
-            setTerm();
+            mixin(switchTerms);
             nc.doupdate();
-            unsetTerm();
         }
 
         /* ---------- Constants ---------- */
 
         int lines()
         {
-            setTerm();
-            scope(exit) unsetTerm();
+            mixin(switchTerms);
             return nc.LINES;
         }
 
         int cols()
         {
-            setTerm();
-            scope(exit) unsetTerm();
+            mixin(switchTerms);
             return nc.COLS;
         }
 
         int maxColors()
         {
-            setTerm();
-            scope(exit) unsetTerm();
+            mixin(switchTerms);
             return nc.COLORS;
         }
 
         int maxColorPairs()
         {
-            setTerm();
-            scope(exit) unsetTerm();
+            mixin(switchTerms);
             return nc.COLOR_PAIRS;
         }
 
         int tabSize()
         {
-            setTerm();
-            scope(exit) unsetTerm();
+            mixin(switchTerms);
             return nc.TABSIZE;
         }
 
         int escDelay()
         {
-            setTerm();
-            scope(exit) unsetTerm();
+            mixin(switchTerms);
             return nc.ESCDELAY;
         }
 
@@ -203,23 +235,19 @@ public abstract class Screen
 
         int baudrate()
         {
-            setTerm();
-            scope(exit) unsetTerm();
+            mixin(switchTerms);
             return nc.baudrate();
         }
 
         bool canChangeColor()
         {
-            setTerm();
-            scope(exit) unsetTerm();
+            mixin(switchTerms);
             return nc.can_change_color();
         }
 
         RGB colorContent(short color)
         {
-            setTerm();
-            scope(exit) unsetTerm();
-
+            mixin(switchTerms);
             short r, g, b;
             nc.color_content(color, &r, &g, &b);
             return RGB(r, g, b);
@@ -227,21 +255,20 @@ public abstract class Screen
 
         bool echoMode()
         {
+            mixin(switchTerms);
             return echoMode_;
         }
 
         bool hasColors()
         {
-            setTerm();
-            scope(exit) unsetTerm();
+            mixin(switchTerms);
             return nc.has_colors();
         }
 
         string keyName(int key)
         {
             import std.string: fromStringz;
-            setTerm();
-            scope(exit) unsetTerm();
+            mixin(switchTerms);
             char* res = nc.keyname(key);
             if (res == null)
                 throw new NCException("Unknown key %s", key);
@@ -257,48 +284,97 @@ package final class StdTerm: Screen
 
         this(CursesConfig config) 
         {
-            cfg = config;
-            stdscr = new Window(this, nc.initscr(), config.initKeypad);
-
-            cfg = config;
-            if (config.useColors) {
-                import std.exception: enforce;
-                enforce(has_colors(), "Terminal does not support colors");
-                start_color();
-                colors = new ColorTable(this, config.useStdColors);
-                stdscr.colors = colors;
+            super(0, config, null);
+            if (nc.initscr() is null) {
+                throw new NCException("Failed to initialize ncurses library");
             }
-
-            echo(!config.disableEcho);
-            setMode(config.mode);
-            setCursor(config.cursLevel);
-            nl(config.nl);
+            initialSetup();
+            setupColors();
+            stdscr = new Window(this, nc.initscr(), config.initKeypad);
         }
 
         /* --- Overrides --- */
 
     public:
-        override void setTerm() { }
-
-    protected:
-        override void unsetTerm() { }
-
-        override void finish()
+        override Screen setTerm() 
         {
-            final switch (curMode) {
-                case CursesMode.normal: break;
-                case CursesMode.cbreak: nc.nocbreak(); break;
-                case CursesMode.halfdelay: nc.nocbreak(); break;
-                case CursesMode.raw: nc.noraw(); break;
-            }
-            if (!echoMode_)
-                nc.echo();
-            nc.nonl();
-            foreach (w; windows)
-                w.free();
+            return this;
+        }
+
+        override void free()
+        {
+            if (wasFreed)
+                return;
+            clearWindows();
             stdscr.free();
             nc.endwin();
             nc.doupdate();
+            wasFreed = true;
         }
 
+}
+
+package final class MultiTerm: Screen
+{
+    private:
+        File input;
+        File output;
+        CursesMulti curses;
+
+    package:
+
+        this(CursesMulti curses, string termtype, File input, File output) 
+        {
+            import std.string: toStringz;
+            SCREEN *ptr = nc.newterm(cast(char *) termtype.toStringz, 
+                    input.getFP, 
+                    output.getFP);
+            if (ptr is null) {
+                throw new NCException("Failed to create a new terminal");
+            }
+            super(curses.nextTermId, curses.config, ptr);
+            this.curses = curses;
+            this.input = input;
+            this.output = output;
+            initialSetup();
+            setupColors();
+        }
+
+    public:
+
+        override Screen setTerm()
+        {
+            if (wasFreed)
+                throw new UseAfterFreeException(
+                        "Terminal %s was set as current after it was freed",
+                        id);
+            import std.algorithm.searching: find;
+            SCREEN *newPtr = nc.set_term(cast(SCREEN *) ptr);
+            if (newPtr is null) {
+                return null;
+            } else {
+                auto fittingTerms = curses.terms.find!((a, b) => a.ptr == b.ptr)(this);
+                return fittingTerms.length == 0 ? null : fittingTerms[0];
+            }
+        }
+
+        override void free()
+        {
+            if (wasFreed)
+                return;
+            mixin(switchTerms);
+            clearWindows();
+            nc.endwin();
+            nc.delscreen(cast(SCREEN *) ptr);
+            wasFreed = true;
+        }
+
+}
+
+package string
+switchTerms(string cur = "this") pure
+{
+    string set = "Screen old = " ~ cur ~ ".setTerm();\n";
+    string unset = "scope(exit) { if (old !is null) old.setTerm(); }";
+    return set ~ unset;
 }

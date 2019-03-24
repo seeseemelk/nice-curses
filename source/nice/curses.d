@@ -6,6 +6,7 @@
 
 module nice.curses;
 
+import std.stdio;
 import std.uni;
 
 import nc = deimos.ncurses;
@@ -29,9 +30,45 @@ final class CursesMono
             stdscr = term.stdscr;
         }
 
-        void finish()
+        void free()
         {
-            term.finishPkg();
+            term.free();
+        }
+
+}
+
+final class CursesMulti
+{
+    package:
+        uint termId;
+
+        uint nextTermId()
+        {
+            return termId++;
+        }
+
+    public:
+        MultiTerm[] terms;
+        CursesConfig config;
+
+        this(CursesConfig cfg = CursesConfig()) 
+        {
+            config = cfg;
+        }
+
+        void free()
+        {
+            import std.range: retro;
+            foreach (term; terms.retro) {
+                term.free();
+            }
+        }
+
+        Screen newterm(string termtype, File input, File output)
+        {
+            auto res = new MultiTerm(this, termtype, input, output);
+            terms ~= res;
+            return res;
         }
 
 }

@@ -5,6 +5,7 @@ import std.uni;
 import nc = deimos.ncurses;
 
 import nice.color_table;
+import nice.exception;
 import nice.screen: Screen;
 import nice.util;
 
@@ -32,6 +33,7 @@ final class Window
         this(Screen screen, WINDOW* fromPtr, bool setKeypad = true)
         {
             this.screen = screen;
+            id = screen.nextWindowId();
             colors = screen.colors;
             ptr = fromPtr;
             keypad(setKeypad);
@@ -46,6 +48,7 @@ final class Window
 
     public:
         ColorTable colors;
+        immutable uint id;
 
         /* ---------- general manipulation ---------- */
 
@@ -512,7 +515,7 @@ final class Window
 
         private void setAttr(A: chtype)(A attr = Attr.normal)
         {
-            if (wattrset(ptr, attr) != OK)
+            if (nc.wattrset(ptr, attr) != OK)
                 throw new NCException("Failed to set attribute '%s'", attr);
         }
 

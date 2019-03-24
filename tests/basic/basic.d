@@ -11,7 +11,7 @@ class BasicTests
     public void testAddch()
     {
         auto curses = new CursesMono();
-        scope(exit) curses.finish();
+        scope(exit) curses.free();
         auto scr = curses.stdscr;
 
         scr.addch(10, 10, 'a');

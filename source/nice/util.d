@@ -6,16 +6,6 @@ import deimos.ncurses;
 
 package alias nc = deimos.ncurses;
 
-/* An exception that is thrown on ncurses errors. */
-class NCException: Exception 
-{
-    this(Arg...)(string formatString, Arg args)
-    {
-        import std.format;
-        super(format(formatString, args));
-    }
-}
-
 /* Wide character - the return type of getwch function. */
 struct WChar
 {

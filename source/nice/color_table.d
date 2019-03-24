@@ -4,7 +4,8 @@ import std.uni;
 
 import nc = deimos.ncurses;
 
-import nice.screen: Screen;
+import nice.exception;
+import nice.screen: Screen, switchTerms;
 import nice.util;
 
 alias chtype = nc.chtype;
@@ -42,9 +43,7 @@ final class ColorTable
            represents. */
         chtype opIndex(short fg, short bg)
         {
-            screen.setTerm();
-            scope(exit) screen.unsetTermPkg();
-
+            mixin(switchTerms("screen"));
             const auto pair = Pair(fg, bg);
             foreach (index, p; pairs)
                 if (p == pair) return nc.COLOR_PAIR(index);
@@ -54,9 +53,7 @@ final class ColorTable
         /* Alternatively, you can use a pair index to get an attribute. */
         chtype opIndex(short pairIndex)
         {
-            screen.setTerm();
-            scope(exit) screen.unsetTermPkg();
-
+            mixin(switchTerms("screen"));
             if (pairIndex in pairs)
                 return nc.COLOR_PAIR(pairIndex);
             else
@@ -66,9 +63,7 @@ final class ColorTable
         /* Return the index of a newly created pair. */
         short addPair(short fg, short bg)
         {
-            screen.setTerm();
-            scope(exit) screen.unsetTermPkg();
-
+            mixin(switchTerms("screen"));
             const bool addNew = reusablePairs == [];
             short pair;
             if (addNew) 
@@ -90,9 +85,7 @@ final class ColorTable
         /* Redefine a color. */
         void redefineColor(short color, short r, short g, short b)
         {
-            screen.setTerm();
-            scope(exit) screen.unsetTermPkg();
-
+            mixin(switchTerms("screen"));
             if (color >= screen.maxColors)
                 throw new NCException("A color with index %s requested, but the " ~
                         "terminal supports only %s colors", color, screen.maxColors);
@@ -104,9 +97,7 @@ final class ColorTable
         /* Return the index of a newly defined color. */
         short addColor(short r, short g, short b)
         {
-            screen.setTerm();
-            scope(exit) screen.unsetTermPkg();
-
+            mixin(switchTerms("screen"));
             if (!screen.canChangeColor)
                 throw new NCException("The terminal doesn't support changing colors");
 
