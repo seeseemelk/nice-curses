@@ -7,15 +7,15 @@ dependency "ncurses" version="~master" configuration="minimal"
 targetType "library"
 targetPath "bin"
 
-configuration "full" { 
+configuration "default" { 
+    excludeSourceFiles "source/nice/ui/*"
 }
 
 configuration "base-ui" {
 	excludedSourceFiles "source/nice/ui/elements.d"
 }
 
-configuration "minimal" { 
-	excludedSourceFiles "source/nice/ui/*"
+configuration "full" { 
 }
 
 subPackage {
@@ -24,7 +24,8 @@ subPackage {
     sourcePaths "tests/basic"
     importPaths "tests/basic"
     dependency "nice-curses" path="./"
-    subConfiguration "nice-curses" "minimal"
+    subConfiguration "nice-curses" "default"
+    targetPath "bin/test"
 
     dependency "d-unit" version="~>0.9.0"
 }
