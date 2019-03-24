@@ -39,6 +39,17 @@ public abstract class Screen
 
     /* ---------- Helpers ---------- */
 
+        override bool opEquals(const Object other) const
+        {
+            if (this is other)
+                return true;
+            if (typeid(this) == typeid(other)) {
+                Screen otherScr = cast(Screen) other;
+                return this.ptr == otherScr.ptr;
+            }
+            return false;
+        }
+
     package:
 
         this(uint id, CursesConfig cfg, SCREEN *ptr)
@@ -78,6 +89,11 @@ public abstract class Screen
             windows = [];
         }
 
+        const (SCREEN *) getPtr() const 
+        {
+            return ptr;
+        }
+
     /* ---------- Public API ---------- */
 
         /* ---------- Really important things ---------- */
@@ -102,8 +118,22 @@ public abstract class Screen
 
         Window newWindow(int nlines, int ncols, int beginY, int beginX)
         {
+            mixin(switchTerms);
+            WINDOW *winptr = nc.newwin(nlines, ncols, beginY, beginX);
+            if (winptr is null)
+                throw new NCException(
+                        "Failed to create a new window in terminal %s", id);
+            return new Window(this, winptr, this.cfg.initKeypad);
+        }
+
+        void deleteWindow(Window win)
+        {
+            import std.algorithm: countUntil, remove;
             throwUnlessValid();
-            return null;
+            win.free();
+            auto index = windows.countUntil(win);
+            if (index >= 0)
+                windows.remove(index);
         }
 
         /* ---------- General commands ---------- */
@@ -285,12 +315,13 @@ package final class StdTerm: Screen
         this(CursesConfig config) 
         {
             super(0, config, null);
-            if (nc.initscr() is null) {
+            WINDOW *scr = nc.initscr();
+            if (scr is null) {
                 throw new NCException("Failed to initialize ncurses library");
             }
             initialSetup();
             setupColors();
-            stdscr = new Window(this, nc.initscr(), config.initKeypad);
+            stdscr = new Window(this, scr, config.initKeypad);
         }
 
         /* --- Overrides --- */
@@ -298,6 +329,7 @@ package final class StdTerm: Screen
     public:
         override Screen setTerm() 
         {
+            throwUnlessValid();
             return this;
         }
 
@@ -306,9 +338,9 @@ package final class StdTerm: Screen
             if (wasFreed)
                 return;
             clearWindows();
-            stdscr.free();
-            nc.endwin();
+            stdscr.free(true);
             nc.doupdate();
+            nc.endwin();
             wasFreed = true;
         }
 
@@ -344,28 +376,22 @@ package final class MultiTerm: Screen
 
         override Screen setTerm()
         {
-            if (wasFreed)
-                throw new UseAfterFreeException(
-                        "Terminal %s was set as current after it was freed",
-                        id);
             import std.algorithm.searching: find;
-            SCREEN *newPtr = nc.set_term(cast(SCREEN *) ptr);
-            if (newPtr is null) {
-                return null;
-            } else {
-                auto fittingTerms = curses.terms.find!((a, b) => a.ptr == b.ptr)(this);
-                return fittingTerms.length == 0 ? null : fittingTerms[0];
-            }
+            throwUnlessValid();
+            SCREEN *oldPtr = nc.set_term(cast(SCREEN *) ptr);
+            return curses.findScreen(oldPtr);
         }
 
         override void free()
         {
+            import std.algorithm.mutation: remove;
             if (wasFreed)
                 return;
             mixin(switchTerms);
             clearWindows();
             nc.endwin();
             nc.delscreen(cast(SCREEN *) ptr);
+            curses.terms.remove(curses.findScreenIndex(this));
             wasFreed = true;
         }
 

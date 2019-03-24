@@ -26,6 +26,7 @@ final class Window
         Screen screen;
         Window[] children;
         bool isKeypad;
+        bool wasFreed;
 
     package:
         WINDOW* ptr;
@@ -39,11 +40,23 @@ final class Window
             keypad(setKeypad);
         }
 
-        void free()
+        void free(bool isStdscr = false)
         {
+            if (wasFreed)
+                return;
             foreach (child; children)
                 child.free();
-            nc.delwin(ptr);
+            if (!isStdscr) 
+                nc.delwin(ptr);
+            wasFreed = true;
+        }
+
+        void throwUnlessValid()
+        {
+            if (wasFreed) 
+                throw new UseAfterFreeException(
+                        "Window %s of terminal %s was used after it was freed",
+                        id, screen.id);
         }
 
     public:
@@ -54,6 +67,7 @@ final class Window
 
         void keypad(bool set)
         {
+            throwUnlessValid();
             if (nc.keypad(ptr, set) != OK) {
                 if (set)
                     throw new NCException("Failed to enable keypad mode");
@@ -65,6 +79,7 @@ final class Window
         /* This one moves the cursor. */
         void move(int y, int x)
         {
+            throwUnlessValid();
             if (nc.wmove(ptr, y, x) != OK) 
                 throw new NCException("Failed to move to position %s:%s", y, x);
         }
@@ -72,12 +87,14 @@ final class Window
         /* This one moves the window. */
         void moveWindow(int y, int x)
         {
+            throwUnlessValid();
             if (nc.mvwin(ptr, y, x) != OK)
                 throw new NCException("Failed to move a window to position %s:%s", y, x);
         }
 
         void refresh()
         {
+            throwUnlessValid();
             nc.wnoutrefresh(ptr);
         }
 
@@ -85,6 +102,7 @@ final class Window
 
         Window subwin(int nlines, int ncols, int y, int x)
         {
+            throwUnlessValid();
             WINDOW* p = nc.subwin(ptr, nlines, ncols, y, x);
             if (p is null) 
                 throw new NCException(
@@ -97,6 +115,7 @@ final class Window
 
         Window derwin(int nlines, int ncols, int y, int x)
         {
+            throwUnlessValid();
             WINDOW* p = nc.derwin(ptr, nlines, ncols, y, x);
             if (p is null) 
                 throw new NCException(
@@ -110,6 +129,7 @@ final class Window
         void deleteChild(Window child)
         {
             import std.algorithm: canFind, remove;
+            throwUnlessValid();
             if (children.canFind(child)) {
                 children.remove!(cur => cur is child);
                 child.free();
@@ -126,6 +146,7 @@ final class Window
 
         void addch(C: cchar_t)(C ch)
         {
+            throwUnlessValid();
             bool isLowerRight = (curY == height - 1) && (curX == width - 1);
             cchar_t cchar = ch;
             if (nc.wadd_wch(ptr, &cchar) != OK && !isLowerRight)
@@ -135,6 +156,7 @@ final class Window
 
         void addch(C: wint_t, A: chtype)(C ch, A attr = Attr.normal)
         {
+            throwUnlessValid();
             bool isLowerRight = (curY == height - 1) && (curX == width - 1);
             auto toDraw = prepChar(ch, attr);
             if (nc.wadd_wch(ptr, &toDraw) != OK && !isLowerRight)
@@ -143,6 +165,7 @@ final class Window
 
         void addch(C: cchar_t)(int y, int x, C ch)
         {
+            throwUnlessValid();
             try {
                 move(y, x);
                 addch(ch);
@@ -154,6 +177,7 @@ final class Window
 
         void addch(C: wint_t, A: chtype)(int y, int x, C ch, A attr = Attr.normal)
         {
+            throwUnlessValid();
             try {
                 move(y, x);
                 addch(ch, attr);
@@ -167,6 +191,7 @@ final class Window
                 OOB onOOB = OOB.ignore)
             if (isString!String && isAttrRange!Range)
         {
+            throwUnlessValid();
             /* Move first. */
             try {
                 move(y, x);
@@ -193,6 +218,7 @@ final class Window
             import std.conv;
             import std.range;
             import std.uni;
+            throwUnlessValid();
             auto grs = str.byGrapheme;
             foreach (gr; str.byGrapheme) {
                 if (n <= 0) break;
@@ -219,6 +245,7 @@ final class Window
             (int y, int x, String str, int n, A attr = Attr.normal, OOB onOOB = OOB.ignore)
             if (isString!String)
         {
+            throwUnlessValid();
             try {
                 move(y, x);
             } catch (NCException e) {
@@ -244,7 +271,7 @@ final class Window
             import std.conv;
             import std.range;
             import std.uni;
-
+            throwUnlessValid();
             setAttr(attr);
             wchar_t[] chars = [];
             chars.reserve(str.walkLength);
@@ -260,6 +287,7 @@ final class Window
                 OOB onOOB = OOB.ignore)
             if (isString!String && isAttrRange!Range)
         {
+            throwUnlessValid();
             addnstr(y, x, str, width * height, attrs, onOOB);
         }
 
@@ -267,6 +295,7 @@ final class Window
         void addstr(String, Range)(String str, Range attrs, OOB onOOB = OOB.ignore)
             if (isString!String && isAttrRange!Range)
         {
+            throwUnlessValid();
             addnstr(str, width * height, attrs, onOOB);
         }
 
@@ -275,6 +304,7 @@ final class Window
                 OOB onOOB = OOB.ignore)
             if (isString!String)
         {
+            throwUnlessValid();
             addnstr(y, x, str, width * height, attr, onOOB);
         }
 
@@ -283,6 +313,7 @@ final class Window
                 OOB onOOB = OOB.ignore)
             if (isString!String)
         {
+            throwUnlessValid();
             addnstr(str, width * height, attr, onOOB);
         }
 
@@ -305,6 +336,8 @@ final class Window
             import std.range;
             import std.string;
             import std.uni;
+
+            throwUnlessValid();
 
             /* Advance to the next line. */
             void nextLine(Range)(Range grs)
@@ -361,6 +394,7 @@ final class Window
             if (isString!String)
         {
             import std.range;
+            throwUnlessValid();
             addAligned(y, x, str, alignment, cycle([attr]), onOOB);
         }
 
@@ -369,6 +403,7 @@ final class Window
                 Range attrs, OOB onOOB = OOB.ignore)
             if (isString!String && isAttrRange!Range)
         {
+            throwUnlessValid();
             final switch(alignment) {
                 case Align.left:
                     addAligned(y, 0, str, alignment, attrs, onOOB);
@@ -388,7 +423,7 @@ final class Window
             if (isString!String)
         {
             import std.range;
-
+            throwUnlessValid();
             addAligned(y, str, alignment, cycle([attr]), onOOB);
         }
 
@@ -396,6 +431,7 @@ final class Window
                 chtype topLeft, chtype topRight, 
                 chtype bottomLeft, chtype bottomRight)
         {
+            throwUnlessValid();
             nc.wborder(ptr, left, right, top, bottom, topLeft, topRight, bottomLeft, bottomRight);
         }
 
@@ -403,6 +439,7 @@ final class Window
                 cchar_t topLeft, cchar_t topRight, 
                 cchar_t bottomLeft, cchar_t bottomRight)
         {
+            throwUnlessValid();
             nc.wborder_set(ptr, 
                     &left, &right, &top, &bottom, 
                     &topLeft, &topRight, &bottomLeft, &bottomRight);
@@ -410,32 +447,38 @@ final class Window
 
         void box(cchar_t vertical, cchar_t horizontal)
         {
+            throwUnlessValid();
             nc.box_set(ptr, &vertical, &horizontal);
         }
 
         void box(chtype v, chtype h)
         {
+            throwUnlessValid();
             nc.box(ptr, v, h);
         }
 
         void delch(int y, int x)
         {
+            throwUnlessValid();
             if (nc.mvwdelch(ptr, y, x) != OK)
                 throw new NCException("Failed to delete character from position %s:%s", y, x);
         }
 
         void delch()
         {
+            throwUnlessValid();
             nc.wdelch(ptr);
         }
 
         void insert(chtype ch)
         {
+            throwUnlessValid();
             nc.winsch(ptr, ch);
         }
 
         void insert(int y, int x, chtype ch)
         {
+            throwUnlessValid();
             if (nc.mvwinsch(ptr, y, x, ch) != OK)
                 throw new NCException("Failed to insert a character at position %s:%s", y, x);
         }
@@ -443,6 +486,7 @@ final class Window
         void insert(string s)
         {
             import std.string;
+            throwUnlessValid();
             /* This is unfortunate, but none of 'insstr' family functions
                accept immutable strings, the result of toStringz. 
                */
@@ -452,6 +496,7 @@ final class Window
         void insert(int y, int x, string s)
         {
             import std.string;
+            throwUnlessValid();
             if (nc.mvwinsstr(ptr, y, x, cast(char*) (s.toStringz)) != OK)
                 throw new NCException("Failed to insert a string at position %s:%s", y, x);
         }
@@ -459,12 +504,14 @@ final class Window
         void insert(string s, int n)
         {
             import std.string;
+            throwUnlessValid();
             nc.winsnstr(ptr, cast(char*) (s.toStringz), n);
         }
 
         void insert(int y, int x, string s, int n)
         {
             import std.string;
+            throwUnlessValid();
             /* This fails to compile if template parameters list is omitted.
                Dunno why.
                */
@@ -475,12 +522,14 @@ final class Window
 
         void hline(int y, int x, chtype ch, int n)
         {
+            throwUnlessValid();
             if (nc.mvwhline(ptr, y, x, ch, n) != OK)
                 throw new NCException("Failed to draw a horizontal line at %s:%s", y, x);
         }
 
         void hline(int y, int x, cchar_t ch, int n)
         {
+            throwUnlessValid();
             try {
                 move(y, x);
                 hline(ch, n);
@@ -491,17 +540,20 @@ final class Window
 
         void hline(chtype ch, int n)
         {
+            throwUnlessValid();
             nc.whline(ptr, ch, n);
         }
 
         void hline(cchar_t ch, int n)
         {
+            throwUnlessValid();
             nc.whline_set(ptr, &ch, n);
         }
 
         /* Overlays this window on top of another (non-destructively). */
         void overlay(Window target)
         {
+            throwUnlessValid();
             if (nc.overlay(ptr, target.ptr) == ERR)
                 throw new NCException("Failed to overlay a window");
         }
@@ -509,24 +561,28 @@ final class Window
         /* Overwrites this window on top of another (destructively). */
         void overwrite(Window target)
         {
+            throwUnlessValid();
             if (nc.overwrite(ptr, target.ptr) == ERR)
                 throw new NCException("Failed to overwrite a window");
         }
 
         private void setAttr(A: chtype)(A attr = Attr.normal)
         {
+            throwUnlessValid();
             if (nc.wattrset(ptr, attr) != OK)
                 throw new NCException("Failed to set attribute '%s'", attr);
         }
 
         void vline(int y, int x, chtype ch, int n)
         {
+            throwUnlessValid();
             if (nc.mvwvline(ptr, y, x, ch, n) != OK)
                 throw new NCException("Failed to draw a vertical line at %s:%s", y, x);
         }
 
         void vline(int y, int x, cchar_t ch, int n)
         {
+            throwUnlessValid();
             try {
                 move(y, x);
                 vline(ch, n);
@@ -537,11 +593,13 @@ final class Window
 
         void vline(chtype ch, int n)
         {
+            throwUnlessValid();
             nc.wvline(ptr, ch, n);
         }
 
         void vline(cchar_t ch, int n)
         {
+            throwUnlessValid();
             nc.wvline_set(ptr, &ch, n);
         }
 
@@ -549,57 +607,68 @@ final class Window
 
         void bkgd(chtype ch)
         {
+            throwUnlessValid();
             nc.wbkgd(ptr, ch);
         }
 
         void bkgdset(chtype ch)
         {
+            throwUnlessValid();
             nc.wbkgdset(ptr, ch);
         }
 
         void clear()
         {
+            throwUnlessValid();
             nc.wclear(ptr);
         }
 
         void clearToBottom()
         {
+            throwUnlessValid();
             nc.wclrtobot(ptr);
         }
 
         void clearToEOL()
         {
+            throwUnlessValid();
             nc.wclrtoeol(ptr);
         }
 
         void deleteln()
         {
+            throwUnlessValid();
             nc.wdeleteln(ptr);
         }
 
         void erase()
         {
+            throwUnlessValid();
             nc.werase(ptr);
         }
 
         void insdel(int n)
         {
+            throwUnlessValid();
             nc.winsdelln(ptr, n);
         }
 
         void insertln()
         {
+            throwUnlessValid();
             nc.winsertln(ptr);
         }
 
         void scroll(int n)
         {
+            throwUnlessValid();
             if (nc.wscrl(ptr, n) != OK)
                 throw new NCException("Failed to scroll a window by %s lines", n);
         }
 
         void timeout(int ms)
         {
+            throwUnlessValid();
             nc.wtimeout(ptr, ms);
         }
 
@@ -607,6 +676,7 @@ final class Window
 
         int getch()
         {
+            throwUnlessValid();
             int res = nc.wgetch(ptr);
             if (res == ERR)
                 throw new NCException("Failed to get a character");
@@ -618,6 +688,7 @@ final class Window
            */
         WChar getwch()
         {
+            throwUnlessValid();
             wint_t chr;
             int res = nc.wget_wch(ptr, &chr);
             if (res == nc.KEY_CODE_YES)
@@ -630,28 +701,32 @@ final class Window
 
         int curX() @property
         {
+            throwUnlessValid();
             return nc.getcurx(ptr);
         }
 
         int curY() @property
         {
+            throwUnlessValid();
             return nc.getcury(ptr);
         }
 
         int width() @property
         {
+            throwUnlessValid();
             return nc.getmaxx(ptr) + 1;
         }
 
         int height() @property
         {
+            throwUnlessValid();
             return nc.getmaxy(ptr) + 1;
         }
 
         string getstr(int maxLength, bool echoChars = true)
         {
             import std.conv;
-
+            throwUnlessValid();
             const bool isEcho = screen.echoMode;
             screen.echo(echoChars);
             scope(exit) screen.echo(isEcho);
@@ -669,12 +744,14 @@ final class Window
 
         string getstr(bool echoChars = true)
         {
+            throwUnlessValid();
             return getstr(ch => true, echoChars);
         }
 
         string getstr(bool delegate(wint_t) predicate, bool echoChars = true)
         {
             import std.conv;
+            throwUnlessValid();
 
             bool isEcho = screen.echoMode;
             screen.echo(false);
@@ -746,6 +823,7 @@ final class Window
         {
             import std.algorithm;
             import std.array;
+            throwUnlessValid();
 
             auto buffer = new chtype[screen.lines * screen.cols + 1];
             buffer[$ - 1] = 0;
@@ -757,6 +835,7 @@ final class Window
         {
             import std.algorithm;
             import std.array;
+            throwUnlessValid();
             
             auto buffer = new chtype[n + 1];
             buffer[$ - 1] = 0;
@@ -766,12 +845,14 @@ final class Window
 
         chtype[] inchstr(int y, int x)
         {
+            throwUnlessValid();
             move(y, x);
             return inchstr;
         }
 
         chtype[] inchstr(int y, int x, int n)
         {
+            throwUnlessValid();
             move(y, x);
             return inchstr(n);
         }
