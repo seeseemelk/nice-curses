@@ -4,6 +4,7 @@ authors "Michail Pevnev"
 copyright "Copyright © 2017, michail"
 license "Boost"
 targetType "staticLibrary"
+targetPath "bin"
 
 configuration "minimal" { 
     libs "ncursesw"
