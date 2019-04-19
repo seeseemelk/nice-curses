@@ -1,16 +1,10 @@
 name "nice-curses"
-description "A nice object-oriented wrapper over ncurses library."
+description "ncurses bindings with safety and convenience in mind"
 authors "Michail Pevnev"
 copyright "Copyright © 2017, michail"
 license "Boost"
-dependency "ncurses" version="~master" configuration="minimal"
-targetType "library"
+targetType "staticLibrary"
 
-configuration "full" { 
-}
-configuration "base-ui" {
-	excludedSourceFiles "source/nice/ui/elements.d"
-}
 configuration "minimal" { 
-	excludedSourceFiles "source/nice/ui/base.d" "source/nice/ui/elements.d"
+    libs "ncursesw"
 }
