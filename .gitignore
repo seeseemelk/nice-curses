@@ -1,1 +1,5 @@
-*
+bin/
+.dub
+*.json
+tags
+*~
