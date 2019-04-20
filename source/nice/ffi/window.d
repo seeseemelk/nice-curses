@@ -6,8 +6,16 @@ import nice.ffi.types;
 
 extern (C) @nogc nothrow
 {
+    /* ---------- normal windows ---------- */
     _window *derwin(_window *, int, int, int, int);
     _window *dupwin(_window *);
+    _window *newwin(int, int, int, int);
+    _window *subwin(_window *, int, int, int, int);
+
+    /* ---------- pads ---------- */
+    _window *newpad(int, int);
+    _window *subpad(_window *, int, int, int, int);
+
 }
 
 /* ---------- pure movement ---------- */

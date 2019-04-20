@@ -48,8 +48,8 @@
 +---- (int) mvwprintw (WINDOW*,int,int, const char *,...)	
 ----- (int) mvwscanw (WINDOW *,int,int, NCURSES_CONST char *,...)	
 ++--- (int) mvwvline (WINDOW *,int, int, chtype, int)
-+---- (WINDOW *) newpad (int,int)
-+---- (WINDOW *) newwin (int,int,int,int)
+++--- (WINDOW *) newpad (int,int)
+++--- (WINDOW *) newwin (int,int,int,int)
 +---- (int) nodelay (WINDOW *,bool)
 +---- (int) notimeout (WINDOW *,bool)
 ++--- (int) overlay (const WINDOW*,WINDOW *)
@@ -62,8 +62,8 @@
 +---- (int) ripoffline (int, int (*)(WINDOW *, int))
 +---- (int) scroll (WINDOW *)
 +---- (int) scrollok (WINDOW *,bool)
-+---- (WINDOW *) subpad (WINDOW *, int, int, int, int)
-+---- (WINDOW *) subwin (WINDOW *, int, int, int, int)
+++--- (WINDOW *) subpad (WINDOW *, int, int, int, int)
+++--- (WINDOW *) subwin (WINDOW *, int, int, int, int)
 +---- (int) syncok (WINDOW *, bool)
 +---- (int) touchline (WINDOW *, int, int)
 +---- (int) touchwin (WINDOW *)
@@ -152,11 +152,15 @@
 ++--- (bool) is_syncok (const WINDOW *)
 ++--- (int) wgetdelay (const WINDOW *)
 ++--- (int) wgetscrreg (const WINDOW *, int *, int *)
-+---- (WINDOW *) NCURSES_SP_NAME(getwin) (SCREEN*, FILE *)
-+---- (int) NCURSES_SP_NAME(intrflush) (SCREEN*, WINDOW*, bool)
-+---- (WINDOW *) NCURSES_SP_NAME(newpad) (SCREEN*, int, int)
-+---- (WINDOW *) NCURSES_SP_NAME(newwin) (SCREEN*, int, int, int, int)
-+---- (int) NCURSES_SP_NAME(ripoffline) (SCREEN*, int, int (*)(WINDOW *, int))
+# These are AWESOME. However, using their actual names is not recommended, they
+# should be used via the NCURSES_SP_NAME macro. Which isn't available for the D
+# side.
+----- (WINDOW *) NCURSES_SP_NAME(getwin) (SCREEN*, FILE *)
+----- (int) NCURSES_SP_NAME(intrflush) (SCREEN*, WINDOW*, bool)
+----- (WINDOW *) NCURSES_SP_NAME(newpad) (SCREEN*, int, int)
+----- (WINDOW *) NCURSES_SP_NAME(newwin) (SCREEN*, int, int, int, int)
+----- (int) NCURSES_SP_NAME(ripoffline) (SCREEN*, int, int (*)(WINDOW *, int))
+
 ----- extern NCURSES_EXPORT_VAR(WINDOW *) curscr
 ----- extern NCURSES_EXPORT_VAR(WINDOW *) newscr
 ----- extern NCURSES_EXPORT_VAR(WINDOW *) stdscr
