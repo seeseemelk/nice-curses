@@ -128,19 +128,19 @@ extern (C) @nogc nothrow
     int wins_wch(_window *, const _cchar_t *);
 
     /* ---------- attribute manipulation ---------- */
-    int mvwchgat(_window *, int, int, int, attr_t, short, const void *);
+    int mvwchgat(_window *, int, int, int, attr_t, pairs_t, const void *);
     int wattron(_window *, int);
     int wattroff(_window *, int);
     int wattrset(_window *, int);
     int wattr_on(_window *, attr_t, void *);
     int wattr_off(_window *, attr_t, void *);
-    int wattr_set(_window *, attr_t, short, void *);
+    int wattr_set(_window *, attr_t, pairs_t, void *);
     int wbkgd(_window *, chtype);
     int wbkgrnd(_window *, const _cchar_t *);
     void wbkgdset(_window *, chtype);
     void wbkgrndset(_window *, const _cchar_t *);
-    int wchgat(_window *, int, attr_t, short, const void *);
-    int wcolor_set(_window *, short, void *);
+    int wchgat(_window *, int, attr_t, pairs_t, const void *);
+    int wcolor_set(_window *, pairs_t, void *);
     int wstandout(_window *);
     int wstandend(_window *);
 
@@ -198,7 +198,7 @@ extern (C) @nogc nothrow
     int mvwin_wchnstr(_window *, int, int, _cchar_t *, int);
 
     /* ---------- chars and strings - without movement ---------- */
-    int wattr_get(_window *, attr_t *, short *, void *);
+    int wattr_get(_window *, attr_t *, pairs_t *, void *);
     int wgetch(_window *);
     int wgetnstr(_window *, char *, int);
     chtype winch(_window *);

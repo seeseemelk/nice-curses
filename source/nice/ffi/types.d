@@ -16,6 +16,12 @@ extern (C) @nogc nothrow
     alias mmask_t = c_ulong;
     alias attr_t = chtype;
 
+    // I don't really know if these can be anything else, but they are defined
+    // as macros in the header, so an alias seems reasonable in case they need
+    // to be changed afterwards for some system.
+    alias color_t = short;
+    alias pairs_t = short;
+
     // If it can be opaque, it should.
     struct _screen;
     struct _window;
