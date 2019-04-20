@@ -24,21 +24,50 @@ extern (C) @nogc nothrow
 {
     int mvderwin(_window *, int, int);
     int mvwin(_window *, int, int);
+    int wmove(_window *, int, int);
 }
 
 /* ---------- high-level manipulations ---------- */
 
 extern (C) @nogc nothrow
 {
-    int clearok(_window *, bool);
+    /* ---------- clearing and refreshing ---------- */
     int redrawwin(_window *);
     int wclear(_window *);
     int wclrtobot(_window *);
     int wclrtoeol(_window *);
+    void wcursyncup(_window *);
     int werase(_window *);
+    int wnoutrefresh(_window *);
     int wredrawln(_window *, int, int);
     int wrefresh(_window *);
+
+    /* ---------- configuring ---------- */
+    int clearok(_window *, bool);
+    void idcok(_window *, bool);
+    int idlok(_window *, bool);
+    void immedok(_window *, bool);
+    int intrflush(_window *, bool);
+    int keypad(_window *, bool);
+    int leaveok(_window *, bool);
+    int meta(_window *, bool);
+    int nodelay(_window *, bool);
+    int notimeout(_window *, bool);
+    int scrollok(_window *, bool);
+    int syncok(_window *, bool);
+    int wsetscrreg(_window *, int, int);
+    int wtimeout(_window *, int);
+
+    /* ---------- miscellaneous ---------- */
+    int scroll(_window *);
+    int touchwin(_window *);
+    int untouchwin(_window *);
+    int use_window(_window *, _window_cb, void *);
+    int wresize(_window *, int, int);
     int wscrl(_window *, int);
+    void wsyncdown(_window *);
+    void wsyncup(_window *);
+
 }
 
 /* ---------- drawing ---------- */
@@ -80,6 +109,8 @@ extern (C) @nogc nothrow
     int waddch(_window *, const chtype);
     int waddchnstr(_window *, const chtype *, int);
     int waddnstr(_window *, const char *, int);
+    int waddnwstr(_window *, const wchar_t *, int);
+    int wadd_wchnstr(_window *, const _cchar_t *, int);
     int winsnstr(_window *, const char *, int);
     int wins_nwstr(_window *, const wchar_t *, int);
 
@@ -98,12 +129,27 @@ extern (C) @nogc nothrow
 
     /* ---------- attribute manipulation ---------- */
     int mvwchgat(_window *, int, int, int, attr_t, short, const void *);
+    int wattron(_window *, int);
+    int wattroff(_window *, int);
+    int wattrset(_window *, int);
+    int wattr_on(_window *, attr_t, void *);
+    int wattr_off(_window *, attr_t, void *);
+    int wattr_set(_window *, attr_t, short, void *);
+    int wbkgd(_window *, chtype);
+    int wbkgrnd(_window *, const _cchar_t *);
+    void wbkgdset(_window *, chtype);
+    void wbkgrndset(_window *, const _cchar_t *);
     int wchgat(_window *, int, attr_t, short, const void *);
+    int wcolor_set(_window *, short, void *);
+    int wstandout(_window *);
+    int wstandend(_window *);
 
     /* ---------- line manipulation ---------- */
+    int touchline(_window *, int, int);
     int wdeleteln(_window *);
     int winsdelln(_window *, int);
     int winsertln(_window *);
+    int wtouchln(_window *, int, int, int);
 
     /* ---------- miscellaneous ---------- */
     int mvwdelch(_window *, int, int);
