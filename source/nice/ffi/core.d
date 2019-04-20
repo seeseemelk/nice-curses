@@ -6,8 +6,6 @@ import nice.ffi.types;
 
 /* ---------- core ncurses routines ---------- */
 
-package:
-
 extern (C) @nogc nothrow
 {
     _window *initscr();
