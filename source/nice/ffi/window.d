@@ -23,6 +23,14 @@ extern (C) @nogc nothrow
 extern (C) @nogc nothrow
 {
     int clearok(_window *, bool);
+    int redrawwin(_window *);
+    int wclear(_window *);
+    int wclrtobot(_window *);
+    int wclrtoeol(_window *);
+    int werase(_window *);
+    int wredrawln(_window *, int, int);
+    int wrefresh(_window *);
+    int wscrl(_window *, int);
 }
 
 /* ---------- drawing ---------- */
@@ -31,15 +39,28 @@ extern (C) @nogc nothrow
 {
     /* ---------- highest-level interactions ---------- */
     int copywin(const _window *, _window *, int, int, int, int, int, int, int, int);
+    int overlay(const _window *, _window *);
+    int overwrite(const _window *, _window *);
 
     /* ---------- boxes, lines and similar ---------- */
     int box(_window *, chtype, chtype);
+    int box_set(_window *, const _cchar_t *, const _cchar_t *);
     int mvwhline(_window *, int, int, chtype, int);
     int mvwhline_set(_window *, int, int, const _cchar_t *, int);
     int mvwvline(_window *, int, int, chtype, int);
     int mvwvline_set(_window *, int, int, const _cchar_t *, int);
+    int wborder(_window *, chtype, chtype, chtype, chtype, chtype, chtype, chtype, chtype);
+    int wborder_set(_window *, 
+            const _cchar_t *, const _cchar_t *,
+            const _cchar_t *, const _cchar_t *,
+            const _cchar_t *, const _cchar_t *,
+            const _cchar_t *, const _cchar_t *);
+    int whline(_window *, chtype, int);
+    int whline_set(_window *, const _cchar_t *, int);
+    int wvline(_window *, chtype, int);
+    int wvline_set(_window *, const _cchar_t *, int);
 
-    /* ---------- string drawing ---------- */
+    /* ---------- string drawing - with movement ---------- */
     int mvwaddchnstr(_window *, int, int, const chtype *, int);
     int mvwaddnstr(_window *, int, int, const char *, int);
     int mvwadd_wchnstr(_window *, int, int, const _cchar_t *, int);
@@ -47,17 +68,45 @@ extern (C) @nogc nothrow
     int mvwinsnstr(_window *, int, int, const char *, int);
     int mvwins_nwstr(_window *, int, int, const wchar_t *, int);
 
-    /* ---------- single-character drawing ---------- */
+    /* ---------- string drawing - without movement ---------- */
+    int waddch(_window *, const chtype);
+    int waddchnstr(_window *, const chtype *, int);
+    int waddnstr(_window *, const char *, int);
+    int winsnstr(_window *, const char *, int);
+    int wins_nwstr(_window *, const wchar_t *, int);
+
+    /* ---------- single-character drawing - with movement ---------- */
     int mvwaddch(_window *, int, int, const chtype);
     int mvwadd_wch(_window *, int, int, const _cchar_t *);
     int mvwinsch(_window *, int, int, chtype);
     int mvwins_wch(_window *, int, int, const _cchar_t *);
 
+    /* ---------- single-character drawing - without movement ---------- */
+    int wadd_wch(_window *, const _cchar_t *);
+    int wechochar(_window *, const chtype);
+    int wecho_wchar(_window *, const _cchar_t *);
+    int winsch(_window *, chtype);
+    int wins_wch(_window *, const _cchar_t *);
+
     /* ---------- attribute manipulation ---------- */
     int mvwchgat(_window *, int, int, int, attr_t, short, const void *);
+    int wchgat(_window *, int, attr_t, short, const void *);
+
+    /* ---------- line manipulation ---------- */
+    int wdeleteln(_window *);
+    int winsdelln(_window *, int);
+    int winsertln(_window *);
 
     /* ---------- miscellaneous ---------- */
     int mvwdelch(_window *, int, int);
+    int wdelch(_window *);
+
+    /* ---------- functions for pads ---------- */
+    int pechochar(_window *, const chtype);
+    int pecho_wchar(_window *, const _cchar_t *);
+    int pnoutrefresh(_window *, int, int, int, int, int, int);
+    int prefresh(_window *, int, int, int, int, int, int);
+
 }
 
 /* ---------- queries ---------- */
