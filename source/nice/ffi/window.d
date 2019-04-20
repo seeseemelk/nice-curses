@@ -113,7 +113,25 @@ extern (C) @nogc nothrow
 
 extern (C) @nogc nothrow
 {
+    /* ---------- global properties ---------- */
     chtype getbkgd(_window *);
+    int getattrs(const _window *);
+    int getcurx(const _window *);
+    int getcury(const _window *);
+    int getbegx(const _window *);
+    int getbegy(const _window *);
+    int getmaxx(const _window *);
+    int getmaxy(const _window *);
+    int getparx(const _window *);
+    int getpary(const _window *);
+    _window *wgetparent(const _window *);
+    int wgetdelay(const _window *);
+    int wgetscrreg(const _window *, int *, int *);
+    int wget_wch(_window *, wint_t *);
+    int wgetbkgrnd(_window *, _cchar_t *);
+    int wgetn_wstr(_window *, wint_t *, int);
+
+    /* ---------- chars and strings - with movement ---------- */
     int mvwgetch(_window *, int, int);
     int mvwgetnstr(_window *, int, int, char *, int);
     int mvwgetn_wstr(_window *, int, int, wint_t *, int);
@@ -124,4 +142,32 @@ extern (C) @nogc nothrow
     int mvwinnwstr(_window *, int, int, wchar_t *, int);
     int mvwin_wch(_window *, int, int, _cchar_t *);
     int mvwin_wchnstr(_window *, int, int, _cchar_t *, int);
+
+    /* ---------- chars and strings - without movement ---------- */
+    int wattr_get(_window *, attr_t *, short *, void *);
+    int wgetch(_window *);
+    int wgetnstr(_window *, char *, int);
+    chtype winch(_window *);
+    int winchnstr(_window *, chtype *, int);
+    int winnstr(_window *, char *, int);
+    int win_wch(_window *, _cchar_t *);
+    int win_wchnstr(_window *, _cchar_t *, int);
+    int winnwstr(_window *, wchar_t *, int);
+
+    /* ---------- miscellaneous ---------- */
+    bool is_cleared(const _window *);
+    bool is_idcok(const _window *);
+    bool is_idlok(const _window *);
+    bool is_immedok(const _window *);
+    bool is_keypad(const _window *);
+    bool is_leaveok(const _window *);
+    bool is_linetouched(_window *, int);
+    bool is_nodelay(const _window *);
+    bool is_notimeout(const _window *);
+    bool is_pad(const _window *);
+    bool is_scrollok(const _window *);
+    bool is_subwin(const _window *);
+    bool is_syncok(const _window *);
+    bool is_wintouched(_window *);
+
 }
