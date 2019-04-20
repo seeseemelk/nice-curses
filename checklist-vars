@@ -1,0 +1,13 @@
+(chtype) acs_map[]
+(WINDOW *) curscr
+(WINDOW *) newscr
+(WINDOW *) stdscr
+(char) ttytype[]
+(int) COLORS
+(int) COLOR_PAIRS
+(int) COLS
+(int) ESCDELAY
+(int) LINES
+(int) TABSIZE
+(cchar_t *) _nc_wacs
+(int) _nc_optimize_enable

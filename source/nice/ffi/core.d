@@ -19,6 +19,19 @@ extern (C) @nogc nothrow
     _screen *set_term(_screen *);
     int doupdate();
 
+}
+
+/* ---------- library-wide operations ---------- */
+
+extern (C) @nogc nothrow
+{
+    void filter();
+    void nofilter();
     int ripoffline(int, int function(_window *, int) nothrow);
+    void use_env(bool);
+    void use_tioctl(bool);
+
+    /* ---------- extensions ---------- */
+    int use_extended_names(bool);
 
 }
