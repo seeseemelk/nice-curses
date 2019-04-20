@@ -6,6 +6,15 @@ license "Boost"
 targetType "staticLibrary"
 targetPath "bin"
 
+libs "ncursesw"
+
 configuration "minimal" { 
-    libs "ncursesw"
+}
+
+configuration "test" {
+    targetType "executable"
+    mainSourceFile "test/main.d"
+    importPaths "test"
+    sourcePaths "test"
+    dependency "d-unit" version="~>0.9.0"
 }
