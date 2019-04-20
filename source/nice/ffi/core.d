@@ -19,4 +19,6 @@ extern (C) @nogc nothrow
     _screen *set_term(_screen *);
     int doupdate();
 
+    int ripoffline(int, int function(_window *, int) nothrow);
+
 }

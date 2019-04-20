@@ -59,7 +59,7 @@
 ++--- (int) prefresh (WINDOW *,int,int,int,int,int,int)
 +---- (int) putwin (WINDOW *, FILE *)
 ++--- (int) redrawwin (WINDOW *)
-+---- (int) ripoffline (int, int (*)(WINDOW *, int))
+++--- (int) ripoffline (int, int (*)(WINDOW *, int))
 ++--- (int) scroll (WINDOW *)
 ++--- (int) scrollok (WINDOW *,bool)
 ++--- (WINDOW *) subpad (WINDOW *, int, int, int, int)
