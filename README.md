@@ -1,3 +1,10 @@
+# NOTE
+This library is abandoned. I have become greatly disillusioned with D after
+digging deeper into it. If you wish, fork it, there's some intersting work done
+in `nodepend` branch about ditching `ncurses` dependency, and `use-screens`
+branch contains a few commits on making use of `newterm` possible and possibly
+sane.
+
 # Introduction
 Using D bindings of ncurses library directly is a bit of a pain - error codes
 instead of exceptions, pointers instead of strings, multitude of functions to
