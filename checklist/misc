@@ -1,0 +1,2 @@
+(int) getcchar (const cchar_t *, wchar_t*, attr_t*, NCURSES_PAIRS_T*, void*)
+(void) trace (const unsigned int)
