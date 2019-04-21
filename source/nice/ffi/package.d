@@ -1,4 +1,4 @@
-module nice.ffi.all;
+module nice.ffi;
 
 public import nice.ffi.color;
 public import nice.ffi.core;
