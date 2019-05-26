@@ -1,9 +1,4 @@
-# NOTE
-This library is abandoned. I have become greatly disillusioned with D after
-digging deeper into it. If you wish, fork it, there's some intersting work done
-in `nodepend` branch about ditching `ncurses` dependency, and `use-screens`
-branch contains a few commits on making use of `newterm` possible and possibly
-sane.
+[![Code Shelter](https://www.codeshelter.co/static/badges/badge-flat.svg)](https://www.codeshelter.co/)
 
 # Introduction
 Using D bindings of ncurses library directly is a bit of a pain - error codes
