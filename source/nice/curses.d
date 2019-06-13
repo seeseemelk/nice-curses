@@ -316,6 +316,12 @@ final class Window
                 throw new NCException("Failed to move a window to position %s:%s", y, x);
         }
 
+        void resize(int nlines, int ncols)
+        {
+            if (wresize(ptr, nlines, ncols) != OK)
+                throw new NCException("Failed to resize a window to size %s:%s", nlines, ncols);
+        }
+
         void refresh()
         {
             nc.wnoutrefresh(ptr);
