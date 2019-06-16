@@ -318,7 +318,7 @@ final class Window
 
         void resize(int nlines, int ncols)
         {
-            if (wresize(ptr, nlines, ncols) != OK)
+            if (nlines > Curses.lines || ncols > Curses.cols || wresize(ptr, nlines, ncols) != OK)
                 throw new NCException("Failed to resize a window to size %s:%s", nlines, ncols);
         }
 
